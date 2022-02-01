@@ -1,3 +1,4 @@
+// TODO: Att du tänkt på metrics i ditt första utkast :) <3
 resource "azurerm_monitor_metric_alert" "cpu90" {
   count = var.skip_alerts ? 0 : 1
 

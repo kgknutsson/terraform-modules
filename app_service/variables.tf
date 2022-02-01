@@ -9,14 +9,6 @@ variable "settings" {
   description = "Global settings."
 }
 
-variable "site_config" {
-  type = map(string)
-  default = {
-    java_version           = "11"
-    java_container         = "JAVA"
-    java_container_version = "SE"
-  }
-}
 
 variable "ip_restrictions" {
   type        = list(map(string))
@@ -45,6 +37,17 @@ variable "subnet_id" {
   type        = string
   description = "Subnet id for connecting to a virtual network."
   default     = null
+}
+
+// TODO: Jag hade lagt en description på alla dessa variabler för tydlighetsskull när fler börjar jobba
+
+variable "site_config" {
+  type = map(string)
+  default = {
+    java_version           = "11" // TODO: Bör dessa vara hårdkodade? Beror helt på hur er stack ser ut, om de verkligen bara är Java SE11 appar go for it
+    java_container         = "JAVA"
+    java_container_version = "SE"
+  }
 }
 
 variable "kind" {

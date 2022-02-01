@@ -10,3 +10,5 @@ terraform {
     }
   }
 }
+
+// TODO: Hur authar de sig mot AZ? AZ CLI, Manged Service Identity, Service Princpal + Cert

@@ -28,6 +28,7 @@ resource "azurerm_subnet" "this" {
   address_prefixes     = each.value.address_prefixes
   service_endpoints    = each.value.service_endpoints
 
+  //TODO: Dynamic är ballt, lägg en länk till docen så man kan läsa ifall man inte förstår
   dynamic "delegation" {
     for_each = each.value.service_delegation[*]
     
@@ -40,11 +41,13 @@ resource "azurerm_subnet" "this" {
       }
     }
   }
-
+  // TODO: Jag hade lagt en kommentar här om varför detta fungerar så en icke programmere hajar
   enforce_private_link_endpoint_network_policies = length(each.value.private_connection_resource[*]) == 1
 }
 
+// TODO: Körs all kod automagiskt genom TF FMT? om de görs manuellt kan de göras med en github action! Så de inte blir problem när flera börjar bidra
 resource "azurerm_private_dns_zone" "this" {
+  // TODO: Finns de körningar från TF, count if satser tenderar att vara skakiga?
   count = anytrue(values(azurerm_subnet.this)[*].enforce_private_link_endpoint_network_policies) ? 1 : 0
 
   name                = "privatelink.database.windows.net"
@@ -63,6 +66,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
 }
 
 resource "azurecaf_name" "private_endpoint" {
+// TODO: De kanske är bättre att lägga de här i en README fil med "vanliga idiom" så du har en universalt exempel. Istället för en kommentar överallt, då uppmuntrar du att flera använder samma
   for_each = { for k, v in var.subnets : k => v if length(v.private_connection_resource[*]) == 1 }
 
   name          = each.value.private_connection_resource.name

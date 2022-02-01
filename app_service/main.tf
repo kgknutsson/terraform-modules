@@ -11,6 +11,7 @@ resource "azurerm_app_service_plan" "this" {
   tags                = var.settings.tags
   kind                = var.kind
   reserved            = var.kind == "Linux" ? true : false
+  // TODO: Varför inte zone redundance?
 
   sku {
     tier     = var.sku.tier
@@ -37,6 +38,7 @@ resource "azurerm_application_insights" "this" {
   daily_data_cap_in_gb = var.insights_daily_data_cap_in_gb
   application_type     = var.is_function ? "web" : var.insights_type
   tags                 = var.settings.tags
+  // TODO: Retention period på dessa? Default är 90 dagar, duger de enligt era SLA:er? Eller sugs loggar ut och ner i "cold storage" där ni kan ha dem längre
 }
 
 resource "azurecaf_name" "app_service" {
@@ -44,7 +46,8 @@ resource "azurecaf_name" "app_service" {
   resource_type = var.is_function ? "azurerm_function_app" : "azurerm_app_service"
   suffixes      = [var.settings.environment]
 }
-
+// TODO: Om vi ska skapa en azurefunction  eller inte kör detta block
+// ------------------------
 resource "azurerm_app_service" "this" {
   count = var.is_function ? 0 : 1
 
@@ -104,7 +107,8 @@ resource "azurerm_app_service" "this" {
     var.app_settings
   )
 }
-
+// TODO: Else..... detta block
+// ---------------
 resource "azurecaf_name" "storage_account" {
   count = var.is_function ? 1 : 0
 
@@ -119,8 +123,8 @@ resource "azurerm_storage_account" "this" {
   name                     = azurecaf_name.storage_account.0.result
   resource_group_name      = azurerm_app_service_plan.this.resource_group_name
   location                 = azurerm_app_service_plan.this.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+  account_tier             = "Standard" // TODO: Hade gjort dessa till variabler, så man kan ha passande conf i test vs prod
+  account_replication_type = "LRS"  // TODO: Hade gjort dessa till variabler, så man kan ha passande conf i test vs prod
   tags                     = var.settings.tags
 }
 
