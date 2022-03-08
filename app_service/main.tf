@@ -172,9 +172,53 @@ resource "azurerm_function_app" "this" {
   )
 }
 
+locals {
+  app_service_id = (var.is_function ? azurerm_function_app.this.0.id : azurerm_app_service.this.0.id)
+}
+
 resource "azurerm_app_service_virtual_network_swift_connection" "this" {
   count = length(var.subnet_id[*])
 
-  app_service_id = (var.is_function ? azurerm_function_app.this.0.id : azurerm_app_service.this.0.id)
+  app_service_id = local.app_service_id
   subnet_id      = var.subnet_id
+}
+
+data "azurerm_monitor_diagnostic_categories" "this" {
+  count = try(length(var.diagnostic_categories.logs), 1) + try(length(var.diagnostic_categories.metrics), 1) > 0 ? length(var.insights_workspace_id[*]) : 0
+
+  resource_id = local.app_service_id
+}
+
+resource "azurerm_monitor_diagnostic_setting" "this" {
+  count = length(data.azurerm_monitor_diagnostic_categories.this)
+
+  name                       = "SendToLogAnalytics"
+  target_resource_id         = local.app_service_id
+  log_analytics_workspace_id = var.insights_workspace_id
+
+  dynamic "log" {
+    for_each = coalesce(var.diagnostic_categories.logs, data.azurerm_monitor_diagnostic_categories.this.0.logs)
+
+    content {
+      category = log.value
+
+      retention_policy {
+        days    = 0
+        enabled = false
+      }
+    }
+  }
+
+  dynamic "metric" {
+    for_each = coalesce(var.diagnostic_categories.metrics, data.azurerm_monitor_diagnostic_categories.this.0.metrics)
+
+    content {
+      category = metric.value
+
+      retention_policy {
+        days    = 0
+        enabled = false
+      }
+    }
+  }
 }

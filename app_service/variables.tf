@@ -82,3 +82,14 @@ variable "is_function" {
   type    = bool
   default = false
 }
+
+variable "diagnostic_categories" {
+  type = object({
+    logs    = list(string)
+    metrics = list(string)
+  })
+  default = {
+    logs = null
+    metrics = null
+  }
+}

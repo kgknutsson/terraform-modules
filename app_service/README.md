@@ -19,3 +19,5 @@ This module configures an Azure App Service instance with Terraform.
 [Terraform Azure App Service Hybrid Connection](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service_hybrid_connection)
 
 [Terraform Azure Monitor Metric Alert](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_metric_alert)
+
+[Terraform Azure Monitor Diagnostic Setting](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/monitor_diagnostic_setting)
