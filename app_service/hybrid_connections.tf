@@ -16,15 +16,6 @@ resource "azurerm_relay_namespace" "this" {
   tags                = var.settings.tags
 }
 
-resource "azurerm_relay_namespace_authorization_rule" "this" {
-  count = length(azurerm_relay_namespace.this)
-
-  name                = "SenderSharedAccessKey"
-  resource_group_name = azurerm_relay_namespace.this.0.resource_group_name
-  namespace_name      = azurerm_relay_namespace.this.0.name
-  send                = true
-}
-
 resource "azurerm_relay_hybrid_connection" "this" {
   for_each = var.hybrid_connections
 
@@ -70,5 +61,5 @@ resource "azurerm_app_service_hybrid_connection" "this" {
   relay_id            = each.value.id
   hostname            = var.hybrid_connections[each.key].hostname
   port                = var.hybrid_connections[each.key].port
-  send_key_name       = "SenderSharedAccessKey"
+  send_key_name       = azurerm_relay_hybrid_connection_authorization_rule.send[each.key].name
 }
