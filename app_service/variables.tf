@@ -52,6 +52,16 @@ variable "kind" {
   default = "Windows"
 }
 
+variable "zone_redundant" {
+  type    = bool
+  default = false
+}
+
+variable "https_only" {
+  type = bool
+  default = true
+}
+
 variable "sku" {
   type = object({
     tier     = string

@@ -11,6 +11,7 @@ resource "azurerm_app_service_plan" "this" {
   tags                = var.settings.tags
   kind                = var.kind
   reserved            = var.kind == "Linux" ? true : false
+  zone_redundant      = var.zone_redundant
 
   sku {
     tier     = var.sku.tier
@@ -52,7 +53,7 @@ resource "azurerm_app_service" "this" {
   resource_group_name = azurerm_app_service_plan.this.resource_group_name
   location            = azurerm_app_service_plan.this.location
   app_service_plan_id = azurerm_app_service_plan.this.id
-  https_only          = true
+  https_only          = var.https_only
   tags                = var.settings.tags
 
   identity {
@@ -134,7 +135,7 @@ resource "azurerm_function_app" "this" {
   storage_account_name       = azurerm_storage_account.this.0.name
   storage_account_access_key = azurerm_storage_account.this.0.primary_access_key
   version                    = "~3"
-  https_only                 = true
+  https_only                 = var.https_only
   tags                       = var.settings.tags
 
   identity {
