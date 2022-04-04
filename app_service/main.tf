@@ -38,6 +38,7 @@ resource "azurerm_application_insights" "this" {
   daily_data_cap_in_gb = var.insights_daily_data_cap_in_gb
   application_type     = var.is_function ? "web" : var.insights_type
   tags                 = var.settings.tags
+  disable_ip_masking   = var.insights_disable_ip_masking
 }
 
 resource "azurecaf_name" "app_service" {

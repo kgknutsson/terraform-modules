@@ -41,6 +41,11 @@ variable "insights_type" {
   default = "java"
 }
 
+variable "insights_disable_ip_masking" {
+  type = bool
+  default = false
+}
+
 variable "subnet_id" {
   type        = string
   description = "Subnet id for connecting to a virtual network."
