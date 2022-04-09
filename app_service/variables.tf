@@ -11,11 +11,7 @@ variable "settings" {
 
 variable "site_config" {
   type = map(string)
-  default = {
-    java_version           = "11"
-    java_container         = "JAVA"
-    java_container_version = "SE"
-  }
+  default = {}
 }
 
 variable "ip_restrictions" {

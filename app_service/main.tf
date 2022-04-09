@@ -62,11 +62,12 @@ resource "azurerm_app_service" "this" {
   }
 
   site_config {
-    always_on              = true
-    ftps_state             = "Disabled"
-    java_version           = lookup(var.site_config, "java_version", null)
-    java_container         = lookup(var.site_config, "java_container", null)
-    java_container_version = lookup(var.site_config, "java_container_version", null)
+    always_on              = lookup(var.site_config, "always_on", true)
+    ftps_state             = lookup(var.site_config, "ftps_state", "Disabled")
+    health_check_path      = lookup(var.site_config, "health_check_path", null)
+    java_version           = lookup(var.site_config, "java_version", "11")
+    java_container         = lookup(var.site_config, "java_container", "JAVA")
+    java_container_version = lookup(var.site_config, "java_container_version", "SE")
     linux_fx_version       = lookup(var.site_config, "linux_fx_version", null)
     vnet_route_all_enabled = length(var.subnet_id[*]) == 1
 
@@ -144,9 +145,10 @@ resource "azurerm_function_app" "this" {
   }
 
   site_config {
-    always_on              = true
-    ftps_state             = "Disabled"
-    java_version           = lookup(var.site_config, "java_version", null)
+    always_on              = lookup(var.site_config, "always_on", true)
+    ftps_state             = lookup(var.site_config, "ftps_state", "Disabled")
+    health_check_path      = lookup(var.site_config, "health_check_path", null)
+    java_version           = lookup(var.site_config, "java_version", "11")
     linux_fx_version       = lookup(var.site_config, "linux_fx_version", null)
     vnet_route_all_enabled = length(var.subnet_id[*]) == 1
 
