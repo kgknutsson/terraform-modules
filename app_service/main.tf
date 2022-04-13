@@ -58,7 +58,8 @@ resource "azurerm_app_service" "this" {
   tags                = var.settings.tags
 
   identity {
-    type = "SystemAssigned"
+    type         = length(var.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
+    identity_ids = var.identity_ids
   }
 
   site_config {
@@ -141,7 +142,8 @@ resource "azurerm_function_app" "this" {
   tags                       = var.settings.tags
 
   identity {
-    type = "SystemAssigned"
+    type         = length(var.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
+    identity_ids = var.identity_ids
   }
 
   site_config {

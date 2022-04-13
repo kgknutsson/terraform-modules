@@ -9,6 +9,11 @@ variable "settings" {
   description = "Global settings."
 }
 
+variable "identity_ids" {
+  type    = list(string)
+  default = []
+}
+
 variable "site_config" {
   type = map(string)
   default = {}
