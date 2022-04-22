@@ -1,111 +1,63 @@
-variable "settings" {
-  type = object({
-    name           = string
-    resource_group = string
-    environment    = string
-    location       = string
-    tags           = map(string)
-  })
-  description = "Global settings."
-}
+variable "config" {
+  type = any
+  description = <<-EOT
+  (Required) Module configuration (version 1).
 
-variable "identity_ids" {
-  type    = list(string)
-  default = []
-}
+  Configuration should have global settings and preferably environment specific settings for dev, prod etc.
+  EOT
 
-variable "site_config" {
-  type = map(string)
-  default = {}
-}
-
-variable "ip_restrictions" {
-  type        = list(map(string))
-  description = "Access restrctions for the app service as a list of IP addresses in CIDR notation."
-  default     = []
-}
-
-variable "insights_workspace_id" {
-  type        = string
-  description = "Id of the Log Analytics workspace that application insights will use."
-  default     = null
-}
-
-variable "insights_daily_data_cap_in_gb" {
-  type        = number
-  description = "Limit the amount of data ingested for this application insights resource."
-  default     = 5
-}
-
-variable "insights_type" {
-  type    = string
-  default = "java"
-}
-
-variable "insights_disable_ip_masking" {
-  type = bool
-  default = false
-}
-
-variable "subnet_id" {
-  type        = string
-  description = "Subnet id for connecting to a virtual network."
-  default     = null
-}
-
-variable "kind" {
-  type    = string
-  default = "Windows"
-}
-
-variable "zone_redundant" {
-  type    = bool
-  default = false
-}
-
-variable "https_only" {
-  type = bool
-  default = true
-}
-
-variable "sku" {
-  type = object({
-    tier     = string
-    size     = string
-    capacity = number
-  })
-}
-
-variable "hybrid_connections" {
-  type = map(object({
-    hostname = string
-    port     = string
-  }))
-  default = {}
-}
-
-variable "app_settings" {
-  type    = map(string)
-  default = {}
-}
-
-variable "skip_alerts" {
-  type    = bool
-  default = false
-}
-
-variable "is_function" {
-  type    = bool
-  default = false
-}
-
-variable "diagnostic_categories" {
-  type = object({
-    logs    = list(string)
-    metrics = list(string)
-  })
-  default = {
-    logs = null
-    metrics = null
+  validation {
+    condition = var.config.version == 1
+    error_message = "Configuration must be version 1."
   }
 }
+
+variable "environment" {
+  type        = string
+  description = <<-EOT
+  (Required) Environment name.
+
+  Must be a single short word, all lowercase, eg. dev.
+  EOT
+
+  validation {
+    condition = var.environment == lower(replace(var.environment, " ", ""))
+    error_message = "Validation failed: Value for environment is not valid."
+  }
+}
+
+variable "resource_group" {
+  type = string
+  description = <<-EOT
+  (Required) Resource group where resources are to be created.
+
+  Resource group name already created outside this module.
+  EOT
+}
+
+
+variable "tags" {
+  type        = map(string)
+  description = <<-EOT
+  (Optional) Tags to add to resources created by the module.
+
+  Tags are key-value pair strings that can be used to categorise and group resources. The module add som tags by defalt which cannot be set manually (application, environment and terraform).
+  EOT
+  default = {}
+
+  validation {
+    condition = length(setintersection(keys(var.tags), ["application", "environment", "terraform"])) == 0
+    error_message = "Validation failed: One or more tags conflict with default tags set by the module."
+  }
+}
+
+variable "subnet_ids" {
+  type        = map(string)
+  description = <<-EOT
+  (Optional) Subnet ids for the virtual network to integrate with.
+
+  Subnet seclection will be based on configuration set in app_service.site_config.vnet_integration_subnet.
+  EOT
+  default     = {}
+}
+

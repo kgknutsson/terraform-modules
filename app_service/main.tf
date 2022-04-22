@@ -1,78 +1,43 @@
-resource "azurecaf_name" "app_service_plan" {
-  name          = var.settings.name
-  resource_type = "azurerm_app_service_plan"
-  suffixes      = [var.settings.environment]
-}
+locals {
+  env_config = lookup(var.config, var.environment, {})
 
-resource "azurerm_app_service_plan" "this" {
-  name                = azurecaf_name.app_service_plan.result
-  resource_group_name = var.settings.resource_group
-  location            = var.settings.location
-  tags                = var.settings.tags
-  kind                = var.kind
-  reserved            = var.kind == "Linux" ? true : false
-  zone_redundant      = var.zone_redundant
+  config = {
+    name           = var.config.global.name
+    location       = var.config.global.location
 
-  sku {
-    tier     = var.sku.tier
-    size     = var.sku.size
-    capacity = var.sku.capacity
-  }
-}
+    tags = merge({
+      application       = var.config.global.name
+      environment       = var.environment
+      terraform         = "true"
+    }, var.tags)
 
-resource "azurecaf_name" "application_insights" {
-  count = length(var.insights_workspace_id[*])
+    type                   = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
+    os_type                = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
+    sku_tier               = try(local.env_config.app_service.sku_tier, var.config.global.app_service.sku_tier, "Standard")
+    sku_name               = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
+    worker_count           = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    https_only             = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
+    zone_balancing_enabled = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
+    metric_alerts          = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
 
-  name          = var.settings.name
-  resource_type = "azurerm_application_insights"
-  suffixes      = [var.settings.environment]
-}
+    diagnostic_categories = {
+      logs    = try(local.env_config.app_service.diagnostic_categories.logs, var.config.global.app_service.diagnostic_categories.logs, null)
+      metrics = try(local.env_config.app_service.diagnostic_categories.metrics, var.config.global.app_service.diagnostic_categories.metrics, null)
+    }
 
-resource "azurerm_application_insights" "this" {
-  count = length(azurecaf_name.application_insights)
+    insights = {
+      application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
+      disable_ip_masking   = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
+      daily_data_cap_in_gb = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
+      workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, null)
+    }
 
-  name                 = azurecaf_name.application_insights.0.result
-  resource_group_name  = azurerm_app_service_plan.this.resource_group_name
-  location             = azurerm_app_service_plan.this.location
-  workspace_id         = var.insights_workspace_id
-  daily_data_cap_in_gb = var.insights_daily_data_cap_in_gb
-  application_type     = var.is_function ? "web" : var.insights_type
-  tags                 = var.settings.tags
-  disable_ip_masking   = var.insights_disable_ip_masking
-}
+    identity_ids = concat(
+      try(var.config.global.app_service.identity_ids, []),
+      try(local.env_config.app_service.identity_ids, [])
+    )
 
-resource "azurecaf_name" "app_service" {
-  name          = var.settings.name
-  resource_type = var.is_function ? "azurerm_function_app" : "azurerm_app_service"
-  suffixes      = [var.settings.environment]
-}
-
-resource "azurerm_app_service" "this" {
-  count = var.is_function ? 0 : 1
-
-  name                = azurecaf_name.app_service.result
-  resource_group_name = azurerm_app_service_plan.this.resource_group_name
-  location            = azurerm_app_service_plan.this.location
-  app_service_plan_id = azurerm_app_service_plan.this.id
-  https_only          = var.https_only
-  tags                = var.settings.tags
-
-  identity {
-    type         = length(var.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = var.identity_ids
-  }
-
-  site_config {
-    always_on              = lookup(var.site_config, "always_on", true)
-    ftps_state             = lookup(var.site_config, "ftps_state", "Disabled")
-    health_check_path      = lookup(var.site_config, "health_check_path", null)
-    java_version           = lookup(var.site_config, "java_version", "11")
-    java_container         = lookup(var.site_config, "java_container", "JAVA")
-    java_container_version = lookup(var.site_config, "java_container_version", "SE")
-    linux_fx_version       = lookup(var.site_config, "linux_fx_version", null)
-    vnet_route_all_enabled = length(var.subnet_id[*]) == 1
-
-    ip_restriction = [ for i, v in var.ip_restrictions : merge(
+    ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
       {
         action                    = null
         headers                   = null
@@ -84,17 +49,136 @@ resource "azurerm_app_service" "this" {
       },
       v
     ) ]
+
+    site_config = merge(
+      {
+        always_on                         = true
+        ftps_state                        = "Disabled"
+        health_check_path                 = null
+        health_check_eviction_time_in_min = null
+        vnet_integration_subnet           = null
+        vnet_route_all_enabled            = can(try(local.env_config.app_service.site_config.vnet_integration_subnet, var.config.global.app_service.site_config.vnet_integration_subnet))
+
+        application_stack = {
+          java_version           = 11
+          java_container         = "JAVA"
+          java_container_version = "SE"
+        }
+      },
+      try(var.config.global.app_service.site_config, {}),
+      try(local.env_config.app_service.site_config, {})
+    )
+
+    app_settings = merge(
+      try(var.config.global.app_service.app_settings, {}),
+      try(local.env_config.app_service.app_settings, {})
+    )
+
+    hybrid_connections = merge(
+      try(var.config.global.app_service.hybrid_connections, {}),
+      try(local.env_config.app_service.hybrid_connections, {})
+    )
+
+    database = {
+      server_id       = try(local.env_config.database.server_id, var.config.global.database.server_id, null)
+      name            = try(local.env_config.database.name, var.config.global.database.name, var.config.global.name)
+      jdbc_properties = concat(try(var.config.global.database.jdbc_properties, []), try(local.env_config.database.jdbc_properties, []))
+    }
+  }
+
+  database_jdbc_template = "jdbc:sqlserver://%s.database.windows.net:1433;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryMSI"
+  database_jdbc_string   = try(join(";", concat([format(local.database_jdbc_template, split("/", local.config.database.server_id)[8], local.config.database.name)], local.config.database.jdbc_properties)), null)
+}
+
+resource "azurecaf_name" "app_service_plan" {
+  name          = local.config.name
+  resource_type = "azurerm_app_service_plan"
+  suffixes      = [var.environment]
+}
+
+resource "azurerm_app_service_plan" "this" {
+  name                = azurecaf_name.app_service_plan.result
+  resource_group_name = var.resource_group
+  location            = local.config.location
+  tags                = local.config.tags
+  kind                = local.config.os_type
+  reserved            = local.config.os_type == "Linux" ? true : false
+  zone_redundant      = local.config.zone_balancing_enabled
+
+  sku {
+    tier     = local.config.sku_tier
+    size     = local.config.sku_name
+    capacity = local.config.worker_count
+  }
+}
+
+resource "azurecaf_name" "application_insights" {
+  count = length(local.config.insights.workspace_id[*])
+
+  name          = local.config.name
+  resource_type = "azurerm_application_insights"
+  suffixes      = [var.environment]
+}
+
+resource "azurerm_application_insights" "this" {
+  count = length(azurecaf_name.application_insights)
+
+  name                 = azurecaf_name.application_insights.0.result
+  resource_group_name  = var.resource_group
+  location             = local.config.location
+  tags                 = local.config.tags
+  application_type     = local.config.type == "WebApp" ? local.config.insights.application_type : "web"
+  daily_data_cap_in_gb = local.config.insights.daily_data_cap_in_gb
+  disable_ip_masking   = local.config.insights.disable_ip_masking
+  workspace_id         = local.config.insights.workspace_id
+}
+
+resource "azurecaf_name" "app_service" {
+  name          = local.config.name
+  resource_type = local.config.type == "WebApp" ? "azurerm_app_service" : "azurerm_function_app"
+  suffixes      = [var.environment]
+}
+
+resource "azurerm_app_service" "this" {
+  count = local.config.type == "WebApp" ? 1 : 0
+
+  name                = azurecaf_name.app_service.result
+  resource_group_name = var.resource_group
+  location            = local.config.location
+  app_service_plan_id = azurerm_app_service_plan.this.id
+  https_only          = local.config.https_only
+  tags                = local.config.tags
+
+  identity {
+    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
+    identity_ids = local.config.identity_ids
+  }
+
+  site_config {
+    always_on              = local.config.site_config.always_on
+    ftps_state             = local.config.site_config.ftps_state
+    health_check_path      = local.config.site_config.health_check_path
+    java_version           = local.config.site_config.application_stack.java_version
+    java_container         = local.config.site_config.application_stack.java_container
+    java_container_version = local.config.site_config.application_stack.java_container_version
+    linux_fx_version       = lookup(local.config.site_config, "linux_fx_version", null)
+    vnet_route_all_enabled = local.config.site_config.vnet_route_all_enabled
+
+    ip_restriction = local.config.ip_restrictions
   }
 
   app_settings = merge(
     {
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+      "SERVER_SERVLET_CONTEXT_PATH"         = "/"
+      "SPRING_PROFILES_ACTIVE"              = var.environment
+      "SPRING_DATASOURCE_URL"               = local.database_jdbc_string
 
       // Monitoring with Azure Application Insights
-      "APPINSIGHTS_INSTRUMENTATIONKEY"                  = try(azurerm_application_insights.this.0.instrumentation_key, "")
+      "APPINSIGHTS_INSTRUMENTATIONKEY"                  = try(azurerm_application_insights.this.0.instrumentation_key, null)
       "APPINSIGHTS_PROFILERFEATURE_VERSION"             = "1.0.0"
       "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"             = "1.0.0"
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, "")
+      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
       "ApplicationInsightsAgent_EXTENSION_VERSION"      = "~2"
       "DiagnosticServices_EXTENSION_VERSION"            = "~3"
       "InstrumentationEngine_EXTENSION_VERSION"         = "disabled"
@@ -105,126 +189,73 @@ resource "azurerm_app_service" "this" {
       "XDT_MicrosoftApplicationInsights_NodeJS"         = "1"
       "XDT_MicrosoftApplicationInsights_PreemptSdk"     = "disabled"
     },
-    var.app_settings
+    local.config.app_settings
   )
 }
 
 resource "azurecaf_name" "storage_account" {
-  count = var.is_function ? 1 : 0
+  count = local.config.type == "FunctionApp" ? 1 : 0
 
-  name          = var.settings.name
+  name          = local.config.name
   resource_type = "azurerm_storage_account"
   random_length = 10
 }
 
 resource "azurerm_storage_account" "this" {
-  count = var.is_function ? 1 : 0
+  count = length(azurecaf_name.storage_account)
 
   name                     = azurecaf_name.storage_account.0.result
-  resource_group_name      = azurerm_app_service_plan.this.resource_group_name
-  location                 = azurerm_app_service_plan.this.location
+  resource_group_name      = var.resource_group
+  location                 = local.config.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  tags                     = var.settings.tags
+  tags                     = local.config.tags
 }
 
 resource "azurerm_function_app" "this" {
-  count = var.is_function ? 1 : 0
+  count = local.config.type == "FunctionApp" ? 1 : 0
 
   name                       = azurecaf_name.app_service.result
-  resource_group_name        = azurerm_app_service_plan.this.resource_group_name
-  location                   = azurerm_app_service_plan.this.location
+  resource_group_name        = var.resource_group
+  location                   = local.config.location
   app_service_plan_id        = azurerm_app_service_plan.this.id
   storage_account_name       = azurerm_storage_account.this.0.name
   storage_account_access_key = azurerm_storage_account.this.0.primary_access_key
   version                    = "~3"
-  https_only                 = var.https_only
-  tags                       = var.settings.tags
+  https_only                 = local.config.https_only
+  tags                       = local.config.tags
 
   identity {
-    type         = length(var.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = var.identity_ids
+    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
+    identity_ids = local.config.identity_ids
   }
 
   site_config {
-    always_on              = lookup(var.site_config, "always_on", true)
-    ftps_state             = lookup(var.site_config, "ftps_state", "Disabled")
-    health_check_path      = lookup(var.site_config, "health_check_path", null)
-    java_version           = lookup(var.site_config, "java_version", "11")
-    linux_fx_version       = lookup(var.site_config, "linux_fx_version", null)
-    vnet_route_all_enabled = length(var.subnet_id[*]) == 1
+    always_on              = local.config.site_config.always_on
+    ftps_state             = local.config.site_config.ftps_state
+    health_check_path      = local.config.site_config.health_check_path
+    java_version           = local.config.site_config.java_version
+    linux_fx_version       = lookup(local.config.site_config, "linux_fx_version", null)
+    vnet_route_all_enabled = local.config.site_config.vnet_route_all_enabled
 
-    ip_restriction = [ for i, v in var.ip_restrictions : merge(
-      {
-        action                    = null
-        headers                   = null
-        name                      = null
-        priority                  = (i + 1) * 100
-        ip_address                = null
-        service_tag               = null
-        virtual_network_subnet_id = null
-      },
-      v
-    ) ]
+    ip_restriction = local.config.ip_restrictions
   }
 
   app_settings = merge(
     {
       // Monitoring with Azure Application Insights
-      "APPINSIGHTS_INSTRUMENTATIONKEY"                  = try(azurerm_application_insights.this.0.instrumentation_key, "")
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, "")
+      "APPINSIGHTS_INSTRUMENTATIONKEY"        = try(azurerm_application_insights.this.0.instrumentation_key, "")
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, "")
+      "SPRING_PROFILES_ACTIVE"                = var.environment
+      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
-    var.app_settings
+    local.config.app_settings
   )
 }
 
-locals {
-  app_service_id = (var.is_function ? azurerm_function_app.this.0.id : azurerm_app_service.this.0.id)
-}
-
 resource "azurerm_app_service_virtual_network_swift_connection" "this" {
-  count = length(var.subnet_id[*])
+  count = local.config.site_config.vnet_integration_subnet != null ? 1 : 0
 
-  app_service_id = local.app_service_id
-  subnet_id      = var.subnet_id
-}
-
-data "azurerm_monitor_diagnostic_categories" "this" {
-  count = try(length(var.diagnostic_categories.logs), 1) + try(length(var.diagnostic_categories.metrics), 1) > 0 ? length(var.insights_workspace_id[*]) : 0
-
-  resource_id = local.app_service_id
-}
-
-resource "azurerm_monitor_diagnostic_setting" "this" {
-  count = length(data.azurerm_monitor_diagnostic_categories.this)
-
-  name                       = "SendToLogAnalytics"
-  target_resource_id         = local.app_service_id
-  log_analytics_workspace_id = var.insights_workspace_id
-
-  dynamic "log" {
-    for_each = coalesce(var.diagnostic_categories.logs, data.azurerm_monitor_diagnostic_categories.this.0.logs)
-
-    content {
-      category = log.value
-
-      retention_policy {
-        days    = 0
-        enabled = false
-      }
-    }
-  }
-
-  dynamic "metric" {
-    for_each = coalesce(var.diagnostic_categories.metrics, data.azurerm_monitor_diagnostic_categories.this.0.metrics)
-
-    content {
-      category = metric.value
-
-      retention_policy {
-        days    = 0
-        enabled = false
-      }
-    }
-  }
+  app_service_id = try(azurerm_app_service.this.0, azurerm_function_app.this.0).id
+  subnet_id      = lookup(var.subnet_ids, local.config.site_config.vnet_integration_subnet)
 }

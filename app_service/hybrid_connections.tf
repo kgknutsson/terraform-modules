@@ -1,23 +1,23 @@
 resource "azurecaf_name" "relay_namespace" {
-  count = length(keys(var.hybrid_connections)[*])
+  count = length(keys(local.config.hybrid_connections)[*])
 
-  name          = var.settings.name
+  name          = local.config.name
   resource_type = "azurerm_relay_namespace"
-  suffixes      = [var.settings.environment]
+  suffixes      = [var.environment]
 }
 
 resource "azurerm_relay_namespace" "this" {
   count = length(azurecaf_name.relay_namespace)
 
   name                = azurecaf_name.relay_namespace.0.result
-  location            = azurerm_app_service_plan.this.location
-  resource_group_name = azurerm_app_service_plan.this.resource_group_name
+  resource_group_name = var.resource_group
+  location            = local.config.location
+  tags                = local.config.tags
   sku_name            = "Standard"
-  tags                = var.settings.tags
 }
 
 resource "azurerm_relay_hybrid_connection" "this" {
-  for_each = var.hybrid_connections
+  for_each = local.config.hybrid_connections
 
   name                 = each.key
   relay_namespace_name = azurerm_relay_namespace.this.0.name
@@ -56,10 +56,10 @@ resource "azurerm_relay_hybrid_connection_authorization_rule" "send" {
 resource "azurerm_app_service_hybrid_connection" "this" {
   for_each = azurerm_relay_hybrid_connection.this
 
-  app_service_name    = (var.is_function ? azurerm_function_app.this.0.name : azurerm_app_service.this.0.name)
+  app_service_name    = try(azurerm_app_service.this.0, azurerm_function_app.this.0).name
   resource_group_name = each.value.resource_group_name
   relay_id            = each.value.id
-  hostname            = var.hybrid_connections[each.key].hostname
-  port                = var.hybrid_connections[each.key].port
+  hostname            = local.config.hybrid_connections[each.key].hostname
+  port                = local.config.hybrid_connections[each.key].port
   send_key_name       = azurerm_relay_hybrid_connection_authorization_rule.send[each.key].name
 }
