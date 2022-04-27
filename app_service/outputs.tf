@@ -1,5 +1,9 @@
+locals {
+  default_hostname = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).default_hostname
+}
+
 output "application_hostname" {
-  value       = "https://${try(azurerm_app_service.this.0.default_site_hostname, azurerm_function_app.this.0.default_hostname)}"
+  value       = "https://${local.default_hostname}"
   description = "The web application URL."
 }
 

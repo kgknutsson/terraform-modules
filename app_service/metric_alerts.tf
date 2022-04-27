@@ -1,14 +1,14 @@
 data "azurerm_monitor_diagnostic_categories" "this" {
   count = try(length(local.config.diagnostic_categories.logs), 1) + try(length(local.config.diagnostic_categories.metrics), 1) > 0 ? length(local.config.insights.workspace_id[*]) : 0
 
-  resource_id = try(azurerm_app_service.this.0, azurerm_function_app.this.0).id
+  resource_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
 }
 
 resource "azurerm_monitor_diagnostic_setting" "this" {
   count = length(data.azurerm_monitor_diagnostic_categories.this)
 
   name                       = "SendToLogAnalytics"
-  target_resource_id         = try(azurerm_app_service.this.0, azurerm_function_app.this.0).id
+  target_resource_id         = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
   log_analytics_workspace_id = local.config.insights.workspace_id
 
   dynamic "log" {
@@ -41,11 +41,11 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
 resource "azurerm_monitor_metric_alert" "cpu90" {
   count = local.config.metric_alerts ? 1 : 0
 
-  name                     = "CPU usage above threshold - ${azurerm_app_service_plan.this.name}"
+  name                     = "CPU usage above threshold - ${azurerm_service_plan.this.name}"
   resource_group_name      = var.resource_group
   target_resource_location = local.config.location
   tags                     = local.config.tags
-  scopes                   = [azurerm_app_service_plan.this.id]
+  scopes                   = [azurerm_service_plan.this.id]
   description              = "Whenever the average cpu percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"
@@ -62,11 +62,11 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
 resource "azurerm_monitor_metric_alert" "mem90" {
   count = local.config.metric_alerts ? 1 : 0
 
-  name                     = "Memory usage above threshold - ${azurerm_app_service_plan.this.name}"
+  name                     = "Memory usage above threshold - ${azurerm_service_plan.this.name}"
   resource_group_name      = var.resource_group
   target_resource_location = local.config.location
   tags                     = local.config.tags
-  scopes                   = [azurerm_app_service_plan.this.id]
+  scopes                   = [azurerm_service_plan.this.id]
   description              = "Whenever the avg memory percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"

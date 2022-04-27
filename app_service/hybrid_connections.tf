@@ -53,13 +53,22 @@ resource "azurerm_relay_hybrid_connection_authorization_rule" "send" {
   send                   = true
 }
 
-resource "azurerm_app_service_hybrid_connection" "this" {
-  for_each = azurerm_relay_hybrid_connection.this
+resource "azurerm_web_app_hybrid_connection" "this" {
+  for_each = { for k, v in azurerm_relay_hybrid_connection.this : k => v if local.config.type == "WebApp" }
 
-  app_service_name    = try(azurerm_app_service.this.0, azurerm_function_app.this.0).name
-  resource_group_name = each.value.resource_group_name
-  relay_id            = each.value.id
-  hostname            = local.config.hybrid_connections[each.key].hostname
-  port                = local.config.hybrid_connections[each.key].port
-  send_key_name       = azurerm_relay_hybrid_connection_authorization_rule.send[each.key].name
+  web_app_id    = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
+  relay_id      = each.value.id
+  hostname      = local.config.hybrid_connections[each.key].hostname
+  port          = local.config.hybrid_connections[each.key].port
+  send_key_name = azurerm_relay_hybrid_connection_authorization_rule.send[each.key].name
+}
+
+resource "azurerm_function_app_hybrid_connection" "this" {
+  for_each = { for k, v in azurerm_relay_hybrid_connection.this : k => v if local.config.type == "FunctionApp" }
+
+  function_app_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
+  relay_id        = each.value.id
+  hostname        = local.config.hybrid_connections[each.key].hostname
+  port            = local.config.hybrid_connections[each.key].port
+  send_key_name   = azurerm_relay_hybrid_connection_authorization_rule.send[each.key].name
 }
