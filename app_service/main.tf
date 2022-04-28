@@ -29,6 +29,7 @@ locals {
       disable_ip_masking   = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
       daily_data_cap_in_gb = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
       workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, null)
+      config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
     }
 
     identity_ids = concat(
@@ -55,6 +56,7 @@ locals {
         ftps_state                        = "Disabled"
         health_check_path                 = null
         health_check_eviction_time_in_min = null
+        use_32_bit_worker                 = false
         vnet_integration_subnet           = null
         vnet_route_all_enabled            = can(try(local.env_config.app_service.site_config.vnet_integration_subnet, var.config.global.app_service.site_config.vnet_integration_subnet))
 
@@ -153,6 +155,7 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
     application_stack {
@@ -171,10 +174,10 @@ resource "azurerm_linux_web_app" "this" {
       "SPRING_DATASOURCE_URL"               = local.database_jdbc_string
 
       // Monitoring with Azure Application Insights
-      "APPINSIGHTS_INSTRUMENTATIONKEY"                  = try(azurerm_application_insights.this.0.instrumentation_key, null)
+      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
       "APPINSIGHTS_PROFILERFEATURE_VERSION"             = "1.0.0"
       "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"             = "1.0.0"
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
+      "APPLICATIONINSIGHTS_CONFIGURATION_CONTENT"       = local.config.insights.config_content != null ? jsonencode(local.config.insights.config_content) : null
       "ApplicationInsightsAgent_EXTENSION_VERSION"      = "~2"
       "DiagnosticServices_EXTENSION_VERSION"            = "~3"
       "InstrumentationEngine_EXTENSION_VERSION"         = "disabled"
@@ -209,6 +212,7 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
     application_stack {
@@ -223,16 +227,15 @@ resource "azurerm_windows_web_app" "this" {
 
   app_settings = merge(
     {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
       "SERVER_SERVLET_CONTEXT_PATH"         = "/"
       "SPRING_PROFILES_ACTIVE"              = var.environment
       "SPRING_DATASOURCE_URL"               = local.database_jdbc_string
 
       // Monitoring with Azure Application Insights
-      "APPINSIGHTS_INSTRUMENTATIONKEY"                  = try(azurerm_application_insights.this.0.instrumentation_key, null)
+      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
       "APPINSIGHTS_PROFILERFEATURE_VERSION"             = "1.0.0"
       "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"             = "1.0.0"
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
+      "APPLICATIONINSIGHTS_CONFIGURATION_CONTENT"       = local.config.insights.config_content != null ? jsonencode(local.config.insights.config_content) : null
       "ApplicationInsightsAgent_EXTENSION_VERSION"      = "~2"
       "DiagnosticServices_EXTENSION_VERSION"            = "~3"
       "InstrumentationEngine_EXTENSION_VERSION"         = "disabled"
@@ -289,6 +292,7 @@ resource "azurerm_linux_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
@@ -332,6 +336,7 @@ resource "azurerm_windows_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
