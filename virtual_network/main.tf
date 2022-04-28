@@ -13,13 +13,13 @@ locals {
 
     address_space = try([local.env_config.virtual_network.address_space], [var.config.global.virtual_network.address_space], [])
 
-    subnets = { for k, v in merge(try(local.env_config.virtual_network.subnets, {}), try(var.config.global.virtual_network.subnets, {})) : k => merge({
-      service_endpoints              = null
-      service_delegation             = null
-      private_connection_resource_id = null
-      subresource_names              = null
-      is_manual_connection           = try(v.private_connection_resource_id, null) != null ? false : null
-    }, v) if can(coalesce(try(v.service_endpoints.0, null), try(v.service_delegation, null), try(v.private_connection_resource_id, null))) }
+    subnets = { for k, v in merge(try(local.env_config.virtual_network.subnets, {}), try(var.config.global.virtual_network.subnets, {})) : k => {
+      service_endpoints              = try(v.service_endpoints, null)
+      service_delegation             = try(v.service_delegation, null)
+      private_connection_resource_id = try(v.private_connection_resource_id, null)
+      subresource_names              = try(v.subresource_names, null)
+      is_manual_connection           = can(try(v.private_connection_resource_id)) ? false : null
+    } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
   }
 }
 
@@ -42,7 +42,7 @@ resource "azurerm_virtual_network" "this" {
 }
 
 resource "azurecaf_name" "subnet" {
-  for_each = { for k, v in local.config.subnets : k => v if can(azurerm_virtual_network.this.0) }
+  for_each = local.config.subnets
 
   name          = each.key
   resource_type = "azurerm_subnet"
