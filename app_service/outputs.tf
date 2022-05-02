@@ -13,6 +13,6 @@ output "application_caf_name" {
 }
 
 output "database_jdbc_string" {
-  value       = try(format(local.database_jdbc_template, split("/", local.config.database.server_id)[8], local.config.database.name), null)
+  value       = local.database_jdbc_basestring
   description = "Database URL."
 }

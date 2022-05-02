@@ -81,14 +81,20 @@ locals {
     )
 
     database = {
-      server_id       = try(local.env_config.database.server_id, var.config.global.database.server_id, null)
+      server_id       = try(local.env_config.database.server_id, var.config.global.database.server_id, null) // Only needed for backwards compatibility
+      server_fqdn     = try(local.env_config.database.server_fqdn, var.config.global.database.server_fqdn, null)
+      server_port     = try(local.env_config.database.server_port, var.config.global.database.server_port, 1433)
       name            = try(local.env_config.database.name, var.config.global.database.name, var.config.global.name)
-      jdbc_properties = concat(try(var.config.global.database.jdbc_properties, []), try(local.env_config.database.jdbc_properties, []))
+      jdbc_template   = try(local.env_config.database.jdbc_template, var.config.global.database.jdbc_template, "jdbc:sqlserver://%s:%s;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryMSI")
+      jdbc_properties = try(
+        merge(try(var.config.global.database.jdbc_properties, {}), try(local.env_config.database.jdbc_properties, {})),
+        { for s in concat(try(var.config.global.database.jdbc_properties, []), try(local.env_config.database.jdbc_properties, [])) : split("=", s)[0] => split("=", s)[1] } // Only needed for backwards compatibility
+      )
     }
   }
 
-  database_jdbc_template = "jdbc:sqlserver://%s.database.windows.net:1433;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryMSI"
-  database_jdbc_string   = try(join(";", concat([format(local.database_jdbc_template, split("/", local.config.database.server_id)[8], local.config.database.name)], local.config.database.jdbc_properties)), null)
+  database_jdbc_basestring = try(format(local.config.database.jdbc_template, try(local.config.database.server_fqdn, "${split("/", local.config.database.server_id)[8]}.database.windows.net"), local.config.database.server_port, local.config.database.name), null)
+  database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
 }
 
 resource "azurecaf_name" "service_plan" {
