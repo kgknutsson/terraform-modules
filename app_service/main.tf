@@ -32,10 +32,12 @@ locals {
       config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
     }
 
-    identity_ids = concat(
-      try(var.config.global.app_service.identity_ids, []),
-      try(local.env_config.app_service.identity_ids, [])
-    )
+    identity_ids = concat(try(var.config.global.app_service.identity_ids, []), try(local.env_config.app_service.identity_ids, [])) // Only needed for backwards compatibility
+
+    identity = {
+      type         = try(local.env_config.app_service.identity.type, var.config.global.app_service.identity.type, "UserAssigned")
+      identity_ids = concat(try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
+    }
 
     ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
       {
@@ -151,9 +153,13 @@ resource "azurerm_linux_web_app" "this" {
   https_only          = local.config.https_only
   tags                = local.config.tags
 
-  identity {
-    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = local.config.identity_ids
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
   }
 
   site_config {
@@ -208,9 +214,13 @@ resource "azurerm_windows_web_app" "this" {
   https_only          = local.config.https_only
   tags                = local.config.tags
 
-  identity {
-    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = local.config.identity_ids
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
   }
 
   site_config {
@@ -288,9 +298,13 @@ resource "azurerm_linux_function_app" "this" {
   https_only                  = local.config.https_only
   tags                        = local.config.tags
 
-  identity {
-    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = local.config.identity_ids
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
   }
 
   site_config {
@@ -332,9 +346,13 @@ resource "azurerm_windows_function_app" "this" {
   https_only                  = local.config.https_only
   tags                        = local.config.tags
 
-  identity {
-    type         = length(local.config.identity_ids) == 0 ? "SystemAssigned" : "UserAssigned"
-    identity_ids = local.config.identity_ids
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
   }
 
   site_config {
