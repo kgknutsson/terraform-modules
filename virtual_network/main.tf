@@ -19,6 +19,7 @@ locals {
       private_connection_resource_id = try(v.private_connection_resource_id, null)
       subresource_names              = try(v.subresource_names, null)
       is_manual_connection           = can(try(v.private_connection_resource_id)) ? false : null
+      security_group_rules           = try(v.security_group_rules, [])
     } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
   }
 }
@@ -119,4 +120,49 @@ resource "azurerm_private_endpoint" "this" {
     subresource_names              = local.config.subnets[each.key].subresource_names
     is_manual_connection           = local.config.subnets[each.key].is_manual_connection
   }
+}
+
+resource "azurecaf_name" "network_security_group" {
+  for_each = { for k, v in local.config.subnets : k => v if length(v.security_group_rules) > 0 }
+
+  name          = local.config.name
+  resource_type = "azurerm_network_security_group"
+  suffixes      = [each.key, var.environment]
+}
+
+resource "azurerm_network_security_group" "this" {
+  for_each = azurecaf_name.network_security_group
+
+  name                = each.value.result
+  location            = azurerm_virtual_network.this.0.location
+  resource_group_name = azurerm_virtual_network.this.0.resource_group_name
+  tags                = local.config.tags
+
+  dynamic "security_rule" {
+    for_each = [ for i, v in local.config.subnets[each.key].security_group_rules : merge({ priority: i * 10 + 100 }, v) ]
+
+    content {
+      name                         = security_rule.value.name
+      description                  = try(security_rule.value.description, "")
+      priority                     = security_rule.value.priority
+      direction                    = security_rule.value.direction
+      access                       = security_rule.value.access
+      protocol                     = security_rule.value.protocol
+      source_port_range            = try(security_rule.value.source_port_range, length(try(security_rule.value.source_port_ranges, [])) == 0 ? "*" : null)
+      source_port_ranges           = try(security_rule.value.source_port_ranges, null)
+      destination_port_range       = try(security_rule.value.destination_port_range, length(try(security_rule.value.destination_port_ranges, [])) == 0 ? "*" : null)
+      destination_port_ranges      = try(security_rule.value.destination_port_ranges, null)
+      source_address_prefix        = try(security_rule.value.source_address_prefix, length(try(security_rule.value.source_address_prefixes, [])) == 0 ? "*" : null)
+      source_address_prefixes      = try(security_rule.value.source_address_prefixes, null)
+      destination_address_prefix   = try(security_rule.value.destination_address_prefix, length(try(security_rule.value.destination_address_prefixes, [])) == 0 ? "*" : null)
+      destination_address_prefixes = try(security_rule.value.destination_address_prefixes, null)
+    }
+  }
+}
+
+resource "azurerm_subnet_network_security_group_association" "this" {
+  for_each = azurerm_network_security_group.this
+
+  subnet_id                 = azurerm_subnet.this[each.key].id
+  network_security_group_id = each.value.id
 }
