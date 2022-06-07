@@ -171,10 +171,14 @@ resource "azurerm_linux_web_app" "this" {
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
-    application_stack {
-      java_version        = local.config.site_config.application_stack.java_version
-      java_server         = local.config.site_config.application_stack.java_server
-      java_server_version = local.config.site_config.application_stack.java_server_version
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version        = application_stack.value.java_version
+        java_server         = application_stack.value.java_server
+        java_server_version = application_stack.value.java_server_version
+      }
     }
 
     ip_restriction = local.config.ip_restrictions
@@ -232,11 +236,15 @@ resource "azurerm_windows_web_app" "this" {
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
-    application_stack {
-      current_stack          = lookup(local.config.site_config.application_stack, "current_stack", local.config.site_config.application_stack.java_version != null ? "java" : null)
-      java_version           = local.config.site_config.application_stack.java_version
-      java_container         = local.config.site_config.application_stack.java_container
-      java_container_version = local.config.site_config.application_stack.java_container_version
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        current_stack          = lookup(application_stack.value, "current_stack", application_stack.value.java_version != null ? "java" : null)
+        java_version           = application_stack.value.java_version
+        java_container         = application_stack.value.java_container
+        java_container_version = application_stack.value.java_container_version
+      }
     }
 
     ip_restriction = local.config.ip_restrictions
@@ -318,8 +326,12 @@ resource "azurerm_linux_function_app" "this" {
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
 
-    application_stack {
-      java_version = local.config.site_config.application_stack.java_version
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version = application_stack.value.java_version
+      }
     }
 
     ip_restriction = local.config.ip_restrictions
@@ -366,8 +378,12 @@ resource "azurerm_windows_function_app" "this" {
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
 
-    application_stack {
-      java_version = local.config.site_config.application_stack.java_version
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version = application_stack.value.java_version
+      }
     }
 
     ip_restriction = local.config.ip_restrictions
