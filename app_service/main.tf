@@ -2,14 +2,21 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name           = var.config.global.name
-    location       = var.config.global.location
+    name     = var.config.global.name
+    location = var.config.global.location
 
-    tags = merge({
-      application       = var.config.global.name
-      environment       = var.environment
-      terraform         = "true"
-    }, var.tags)
+    tags = merge(
+      {
+        application = var.config.global.name
+        environment = var.environment
+        terraform   = "true"
+      },
+      var.tags,
+      try(var.config.global.tags, {}),
+      try(local.env_config.tags, {}),
+      try(var.config.global.app_service.tags, {}),
+      try(local.env_config.app_service.tags, {})
+    )
 
     type                   = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
     os_type                = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux

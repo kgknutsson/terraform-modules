@@ -2,17 +2,24 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name           = var.config.global.name
-    location       = var.config.global.location
+    name     = var.config.global.name
+    location = var.config.global.location
 
-    tags = merge({
-      application       = var.config.global.name
-      environment       = var.environment
-      terraform         = "true"
-    }, var.tags)
+    tags = merge(
+      {
+        application = var.config.global.name
+        environment = var.environment
+        terraform   = "true"
+      },
+      var.tags,
+      try(var.config.global.tags, {}),
+      try(local.env_config.tags, {}),
+      try(var.config.global.application_gateway.tags, {}),
+      try(local.env_config.application_gateway.tags, {})
+    )
 
-    sku_name                   = try(local.env_config.application_gateway.sku_name, var.config.global.application_gateway.sku_name, "Standard_v2")
-    capacity                   = try(local.env_config.application_gateway.capacity, var.config.global.application_gateway.capacity, 1)
+    sku_name = try(local.env_config.application_gateway.sku_name, var.config.global.application_gateway.sku_name, "Standard_v2")
+    capacity = try(local.env_config.application_gateway.capacity, var.config.global.application_gateway.capacity, 1)
 
     gateway_ip_configuration = {
       name   = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
@@ -546,6 +553,7 @@ resource "azurerm_application_gateway" "this" {
             for_each = rewrite_rule.value.url[*]
 
             content {
+              //components   = try(url.value.components, can(url.value.path) ? can(url.value.query_string) ? null : "path_only" : "query_string_only") // path_only or query_string_only
               path         = try(url.value.path, null)
               query_string = try(url.value.query_string, null)
               reroute      = try(url.value.reroute, null)

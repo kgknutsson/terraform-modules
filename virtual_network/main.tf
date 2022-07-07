@@ -2,14 +2,21 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name           = var.config.global.name
-    location       = var.config.global.location
+    name     = var.config.global.name
+    location = var.config.global.location
 
-    tags = merge({
-      application       = var.config.global.name
-      environment       = var.environment
-      terraform         = "true"
-    }, var.tags)
+    tags = merge(
+      {
+        application = var.config.global.name
+        environment = var.environment
+        terraform   = "true"
+      },
+      var.tags,
+      try(var.config.global.tags, {}),
+      try(local.env_config.tags, {}),
+      try(var.config.global.virtual_network.tags, {}),
+      try(local.env_config.virtual_network.tags, {})
+    )
 
     address_space = try([local.env_config.virtual_network.address_space], [var.config.global.virtual_network.address_space], [])
 

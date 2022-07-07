@@ -1,13 +1,22 @@
 locals {
-  config = {
-    name           = var.config.global.name
-    location       = var.config.global.location
+  env_config = lookup(var.config, var.environment, {})
 
-    tags = merge({
-      application       = var.config.global.name
-      environment       = var.environment
-      terraform         = "true"
-    }, var.tags)
+  config = {
+    name     = var.config.global.name
+    location = var.config.global.location
+
+    tags = merge(
+      {
+        application = var.config.global.name
+        environment = var.environment
+        terraform   = "true"
+      },
+      var.tags,
+      try(var.config.global.tags, {}),
+      try(local.env_config.tags, {}),
+      try(var.config.global.resource_group.tags, {}),
+      try(local.env_config.resource_group.tags, {})
+    )
   }
 }
 

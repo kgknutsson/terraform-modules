@@ -2,14 +2,21 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name           = var.config.global.name
-    location       = var.config.global.location
+    name     = var.config.global.name
+    location = var.config.global.location
 
-    tags = merge({
-      application       = var.config.global.name
-      environment       = var.environment
-      terraform         = "true"
-    }, var.tags)
+    tags = merge(
+      {
+        application = var.config.global.name
+        environment = var.environment
+        terraform   = "true"
+      },
+      var.tags,
+      try(var.config.global.tags, {}),
+      try(local.env_config.tags, {}),
+      try(var.config.global.key_vault.tags, {}),
+      try(local.env_config.key_vault.tags, {})
+    )
 
     sku_name                        = try(local.env_config.key_vault.sku_name, var.config.global.key_vault.sku_name, "standard")
     enabled_for_template_deployment = try(local.env_config.key_vault.enabled_for_template_deployment, var.config.global.key_vault.enabled_for_template_deployment, true)
