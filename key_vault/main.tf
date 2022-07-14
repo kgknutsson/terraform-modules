@@ -20,6 +20,7 @@ locals {
 
     sku_name                        = try(local.env_config.key_vault.sku_name, var.config.global.key_vault.sku_name, "standard")
     enabled_for_template_deployment = try(local.env_config.key_vault.enabled_for_template_deployment, var.config.global.key_vault.enabled_for_template_deployment, true)
+    purge_protection_enabled        = try(local.env_config.key_vault.purge_protection_enabled, var.config.global.key_vault.purge_protection_enabled, false)
 
     network_acls = {
       bypass                     = try(local.env_config.key_vault.network_acls.bypass, var.config.global.key_vault.network_acls.bypass, "AzureServices")
@@ -47,6 +48,8 @@ resource "azurerm_key_vault" "this" {
   tenant_id                       = data.azurerm_client_config.this.tenant_id
   sku_name                        = local.config.sku_name
   enabled_for_template_deployment = local.config.enabled_for_template_deployment
+  #tfsec:ignore:azure-keyvault-no-purge
+  purge_protection_enabled        = local.config.purge_protection_enabled
 
   network_acls {
     bypass = local.config.network_acls.bypass
