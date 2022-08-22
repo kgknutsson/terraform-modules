@@ -18,13 +18,15 @@ locals {
       try(local.env_config.app_service.tags, {})
     )
 
-    type                   = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
-    os_type                = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
-    sku_name               = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
-    worker_count           = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
-    https_only             = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
-    zone_balancing_enabled = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
-    metric_alerts          = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
+    type                       = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
+    os_type                    = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
+    sku_name                   = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
+    worker_count               = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    https_only                 = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
+    client_certificate_enabled = try(local.env_config.app_service.client_certificate_enabled, var.config.global.app_service.client_certificate_enabled, null)
+    client_certificate_mode    = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null)
+    zone_balancing_enabled     = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
+    metric_alerts              = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
 
     diagnostic_categories = {
       logs    = try(local.env_config.app_service.diagnostic_categories.logs, var.config.global.app_service.diagnostic_categories.logs, null)
@@ -65,6 +67,7 @@ locals {
         ftps_state                        = "Disabled"
         health_check_path                 = null
         health_check_eviction_time_in_min = null
+        scm_minimum_tls_version           = null
         use_32_bit_worker                 = false
         vnet_integration_subnet           = null
         vnet_route_all_enabled            = can(try(local.env_config.app_service.site_config.vnet_integration_subnet, var.config.global.app_service.site_config.vnet_integration_subnet))
@@ -154,12 +157,14 @@ resource "azurecaf_name" "app_service" {
 resource "azurerm_linux_web_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "WebApp" ? 1 : 0
 
-  name                = azurecaf_name.app_service.result
-  resource_group_name = var.resource_group
-  location            = local.config.location
-  service_plan_id     = azurerm_service_plan.this.id
-  https_only          = local.config.https_only
-  tags                = local.config.tags
+  name                       = azurecaf_name.app_service.result
+  resource_group_name        = var.resource_group
+  location                   = local.config.location
+  service_plan_id            = azurerm_service_plan.this.id
+  https_only                 = local.config.https_only
+  client_certificate_enabled = local.config.client_certificate_enabled
+  client_certificate_mode    = local.config.client_certificate_mode
+  tags                       = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -175,6 +180,7 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
@@ -219,12 +225,14 @@ resource "azurerm_linux_web_app" "this" {
 resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
-  name                = azurecaf_name.app_service.result
-  resource_group_name = var.resource_group
-  location            = local.config.location
-  service_plan_id     = azurerm_service_plan.this.id
-  https_only          = local.config.https_only
-  tags                = local.config.tags
+  name                       = azurecaf_name.app_service.result
+  resource_group_name        = var.resource_group
+  location                   = local.config.location
+  service_plan_id            = azurerm_service_plan.this.id
+  https_only                 = local.config.https_only
+  client_certificate_enabled = local.config.client_certificate_enabled
+  client_certificate_mode    = local.config.client_certificate_mode
+  tags                       = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -240,6 +248,7 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
@@ -320,6 +329,8 @@ resource "azurerm_linux_function_app" "this" {
   storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
   functions_extension_version = "~3"
   https_only                  = local.config.https_only
+  client_certificate_enabled  = local.config.client_certificate_enabled
+  client_certificate_mode     = local.config.client_certificate_mode
   tags                        = local.config.tags
 
   dynamic "identity" {
@@ -336,6 +347,7 @@ resource "azurerm_linux_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
@@ -372,6 +384,8 @@ resource "azurerm_windows_function_app" "this" {
   storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
   functions_extension_version = "~3"
   https_only                  = local.config.https_only
+  client_certificate_enabled  = local.config.client_certificate_enabled
+  client_certificate_mode     = local.config.client_certificate_mode
   tags                        = local.config.tags
 
   dynamic "identity" {
@@ -388,6 +402,7 @@ resource "azurerm_windows_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
