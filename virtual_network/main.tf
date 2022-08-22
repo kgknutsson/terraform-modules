@@ -78,11 +78,11 @@ resource "azurerm_subnet" "this" {
     }
   }
 
-  enforce_private_link_endpoint_network_policies = local.config.subnets[each.key].private_connection_resource_id != null
+  private_endpoint_network_policies_enabled = local.config.subnets[each.key].private_connection_resource_id == null
 }
 
 resource "azurerm_private_dns_zone" "this" {
-  count = anytrue(values(azurerm_subnet.this)[*].enforce_private_link_endpoint_network_policies) ? 1 : 0
+  count = alltrue(values(azurerm_subnet.this)[*].private_endpoint_network_policies_enabled) ? 0 : 1
 
   name                = "privatelink.database.windows.net"
   resource_group_name = azurerm_virtual_network.this.0.resource_group_name
@@ -100,7 +100,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
 }
 
 resource "azurecaf_name" "private_endpoint" {
-  for_each = { for k, v in azurerm_subnet.this : k => v if v.enforce_private_link_endpoint_network_policies }
+  for_each = { for k, v in azurerm_subnet.this : k => v if !v.private_endpoint_network_policies_enabled }
 
   name          = reverse(split("/", local.config.subnets[each.key].private_connection_resource_id))[0]
   resource_type = "azurerm_private_endpoint"
