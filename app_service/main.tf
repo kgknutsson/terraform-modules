@@ -22,6 +22,15 @@ locals {
     os_type                    = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
     sku_name                   = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
     worker_count               = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    virtual_network_subnet_id  = try(
+      var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+      local.env_config.app_service.virtual_network_subnet_id,
+      var.subnet_ids[local.env_config.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
+      var.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+      var.config.global.app_service.virtual_network_subnet_id,
+      var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
+      null
+    )
     https_only                 = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
     client_certificate_enabled = try(local.env_config.app_service.client_certificate_enabled, var.config.global.app_service.client_certificate_enabled, null)
     client_certificate_mode    = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null)
@@ -69,8 +78,15 @@ locals {
         health_check_eviction_time_in_min = null
         scm_minimum_tls_version           = null
         use_32_bit_worker                 = false
-        vnet_integration_subnet           = null
-        vnet_route_all_enabled            = can(try(local.env_config.app_service.site_config.vnet_integration_subnet, var.config.global.app_service.site_config.vnet_integration_subnet))
+        vnet_route_all_enabled            = try(
+          var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+          local.env_config.app_service.virtual_network_subnet_id,
+          var.subnet_ids[local.env_config.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
+          var.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+          var.config.global.app_service.virtual_network_subnet_id,
+          var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
+          null
+        ) != null
 
         application_stack = {
           java_version           = 11
@@ -161,6 +177,7 @@ resource "azurerm_linux_web_app" "this" {
   resource_group_name        = var.resource_group
   location                   = local.config.location
   service_plan_id            = azurerm_service_plan.this.id
+  virtual_network_subnet_id  = local.config.virtual_network_subnet_id
   https_only                 = local.config.https_only
   client_certificate_enabled = local.config.client_certificate_enabled
   client_certificate_mode    = local.config.client_certificate_mode
@@ -229,6 +246,7 @@ resource "azurerm_windows_web_app" "this" {
   resource_group_name        = var.resource_group
   location                   = local.config.location
   service_plan_id            = azurerm_service_plan.this.id
+  virtual_network_subnet_id  = local.config.virtual_network_subnet_id
   https_only                 = local.config.https_only
   client_certificate_enabled = local.config.client_certificate_enabled
   client_certificate_mode    = local.config.client_certificate_mode
@@ -328,6 +346,7 @@ resource "azurerm_linux_function_app" "this" {
   storage_account_name        = azurerm_storage_account.this.0.name
   storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
   functions_extension_version = "~3"
+  virtual_network_subnet_id   = local.config.virtual_network_subnet_id
   https_only                  = local.config.https_only
   client_certificate_enabled  = local.config.client_certificate_enabled
   client_certificate_mode     = local.config.client_certificate_mode
@@ -383,6 +402,7 @@ resource "azurerm_windows_function_app" "this" {
   storage_account_name        = azurerm_storage_account.this.0.name
   storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
   functions_extension_version = "~3"
+  virtual_network_subnet_id   = local.config.virtual_network_subnet_id
   https_only                  = local.config.https_only
   client_certificate_enabled  = local.config.client_certificate_enabled
   client_certificate_mode     = local.config.client_certificate_mode
@@ -426,11 +446,4 @@ resource "azurerm_windows_function_app" "this" {
     },
     local.config.app_settings
   )
-}
-
-resource "azurerm_app_service_virtual_network_swift_connection" "this" {
-  count = local.config.site_config.vnet_integration_subnet != null ? 1 : 0
-
-  app_service_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
-  subnet_id      = lookup(var.subnet_ids, local.config.site_config.vnet_integration_subnet)
 }
