@@ -211,7 +211,19 @@ resource "azurerm_linux_web_app" "this" {
       }
     }
 
-    ip_restriction = local.config.ip_restrictions
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
   }
 
   app_settings = merge(
@@ -281,7 +293,19 @@ resource "azurerm_windows_web_app" "this" {
       }
     }
 
-    ip_restriction = local.config.ip_restrictions
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
   }
 
   app_settings = merge(
@@ -380,7 +404,19 @@ resource "azurerm_linux_function_app" "this" {
       }
     }
 
-    ip_restriction = local.config.ip_restrictions
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
   }
 
   app_settings = merge(
@@ -436,7 +472,19 @@ resource "azurerm_windows_function_app" "this" {
       }
     }
 
-    ip_restriction = local.config.ip_restrictions
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
   }
 
   app_settings = merge(
