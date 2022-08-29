@@ -558,7 +558,7 @@ resource "azurerm_application_gateway" "this" {
             for_each = rewrite_rule.value.url[*]
 
             content {
-              //components   = try(url.value.components, can(url.value.path) ? can(url.value.query_string) ? null : "path_only" : "query_string_only") // path_only or query_string_only
+              components   = try(url.value.components, can(url.value.path) ? can(url.value.query_string) ? null : "path_only" : "query_string_only") // path_only or query_string_only
               path         = try(url.value.path, null)
               query_string = try(url.value.query_string, null)
               reroute      = try(url.value.reroute, null)
