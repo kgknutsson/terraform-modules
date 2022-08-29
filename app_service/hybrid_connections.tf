@@ -33,7 +33,7 @@ resource "azurerm_relay_hybrid_connection" "this" {
   )
 }
 
-resource "azurerm_relay_hybrid_connection_authorization_rule" "list" {
+resource "azurerm_relay_hybrid_connection_authorization_rule" "listen" {
   for_each = azurerm_relay_hybrid_connection.this
 
   name                   = "defaultListener"
@@ -50,6 +50,7 @@ resource "azurerm_relay_hybrid_connection_authorization_rule" "send" {
   resource_group_name    = each.value.resource_group_name
   hybrid_connection_name = each.value.name
   namespace_name         = each.value.relay_namespace_name
+  listen                 = true // Needed because web_app_hybrid_connection have no separate listen_key_name property.
   send                   = true
 }
 
