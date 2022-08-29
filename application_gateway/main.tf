@@ -22,8 +22,13 @@ locals {
     capacity = try(local.env_config.application_gateway.capacity, var.config.global.application_gateway.capacity, 1)
 
     gateway_ip_configuration = {
-      name   = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
-      subnet = try(local.env_config.application_gateway.gateway_ip_configuration.subnet, var.config.global.application_gateway.gateway_ip_configuration.subnet)
+      name      = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
+      subnet_id = try(
+        var.subnet_ids[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
+        local.env_config.application_gateway.gateway_ip_configuration.subnet_id,
+        var.subnet_ids[var.config.global.application_gateway.gateway_ip_configuration.subnet_id],
+        var.config.global.application_gateway.gateway_ip_configuration.subnet_id
+      )
     }
 
     ssl_policy = {
@@ -343,8 +348,8 @@ resource "azurerm_application_gateway" "this" {
   }
 
   gateway_ip_configuration {
-    name      = coalesce(local.config.gateway_ip_configuration.name, local.config.gateway_ip_configuration.subnet)
-    subnet_id = lookup(var.subnet_ids, local.config.gateway_ip_configuration.subnet)
+    name      = local.config.gateway_ip_configuration.name
+    subnet_id = local.config.gateway_ip_configuration.subnet_id
   }
 
   dynamic "frontend_ip_configuration" {
