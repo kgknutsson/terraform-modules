@@ -22,6 +22,7 @@ locals {
 
     subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => merge(
       {
+        subnet_size                    = 28
         service_endpoints              = null
         service_delegation             = null
         private_connection_resource_id = null
@@ -53,6 +54,16 @@ resource "azurerm_virtual_network" "this" {
   address_space       = local.config.address_space
 }
 
+module "subnet_addrs" {
+  source  = "hashicorp/subnets/cidr"
+  version = "1.0.0"
+
+  count = length(local.config.address_space)
+
+  base_cidr_block = local.config.address_space.0
+  networks        = [ for k, v in local.config.subnets : { name = k, new_bits = v.subnet_size - split("/", local.config.address_space.0)[1] } ]
+}
+
 resource "azurecaf_name" "subnet" {
   for_each = local.config.subnets
 
@@ -66,7 +77,7 @@ resource "azurerm_subnet" "this" {
   name                 = each.value.result
   resource_group_name  = azurerm_virtual_network.this.0.resource_group_name
   virtual_network_name = azurerm_virtual_network.this.0.name
-  address_prefixes     = [ for s in azurerm_virtual_network.this.0.address_space : cidrsubnet(s, 4, index(keys(azurecaf_name.subnet), each.key)) ]
+  address_prefixes     = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
   service_endpoints    = local.config.subnets[each.key].service_endpoints
 
   dynamic "delegation" {
