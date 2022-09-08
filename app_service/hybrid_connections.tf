@@ -1,5 +1,5 @@
 resource "azurecaf_name" "relay_namespace" {
-  count = length(keys(local.config.hybrid_connections)[*])
+  count = min(length(local.config.hybrid_connections), 1)
 
   name          = local.config.name
   resource_type = "azurerm_relay_namespace"
