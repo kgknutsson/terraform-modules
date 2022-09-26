@@ -37,10 +37,14 @@ locals {
     zone_balancing_enabled     = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
     metric_alerts              = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
 
-    diagnostic_categories = {
-      logs    = try(local.env_config.app_service.diagnostic_categories.logs, var.config.global.app_service.diagnostic_categories.logs, null)
-      metrics = try(local.env_config.app_service.diagnostic_categories.metrics, var.config.global.app_service.diagnostic_categories.metrics, null)
-    }
+    monitor_diagnostic_setting = merge(
+      {
+        log_category_types = null
+        metrics            = null
+      },
+      try(coalesce(var.config.global.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {}),
+      try(coalesce(local.env_config.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {})
+    )
 
     insights = {
       application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
