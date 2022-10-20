@@ -85,9 +85,9 @@ locals {
         try(local.env_config.application_gateway.ssl_certificates, [])
       ) : merge(
         {
-          data             = null
-          password         = null
-          key_vault_secret = null
+          data                = null
+          password            = null
+          key_vault_secret_id = null
         },
         v
       )
@@ -261,8 +261,8 @@ locals {
   }
 }
 
-data "azurerm_key_vault_secret" "this" {
-  for_each = toset([ for v in concat(local.config.ssl_certificates, local.config.trusted_root_certificates) : coalesce(v.key_vault_secret, v.name) if v.data == null ])
+data "azurerm_key_vault_certificate" "this" {
+  for_each = toset([ for v in concat(local.config.ssl_certificates, local.config.trusted_root_certificates) : v.name if v.key_vault_secret_id == null && v.data == null ])
 
   name         = each.value
   key_vault_id = var.key_vault_id
@@ -377,7 +377,7 @@ resource "azurerm_application_gateway" "this" {
       name                = ssl_certificate.value.name
       data                = ssl_certificate.value.data
       password            = ssl_certificate.value.password
-      key_vault_secret_id = ssl_certificate.value.data == null ? data.azurerm_key_vault_secret.this[coalesce(ssl_certificate.value.key_vault_secret, ssl_certificate.value.name)].id : null
+      key_vault_secret_id = ssl_certificate.value.data == null ? try(data.azurerm_key_vault_certificate.this[ssl_certificate.value.name].versionless_secret_id, ssl_certificate.value.key_vault_secret_id) : null
     }
   }
 
@@ -389,6 +389,7 @@ resource "azurerm_application_gateway" "this" {
       frontend_ip_configuration_name = http_listener.value.frontend_ip_configuration
       frontend_port_name             = coalesce(http_listener.value.frontend_port, "port${http_listener.value.ssl_certificate == null ? 80 : 443}")
       protocol                       = try(http_listener.value.protocol, http_listener.value.ssl_certificate == null ? "Http" : "Https")
+      require_sni                    = coalesce(http_listener.value.require_sni, http_listener.value.ssl_certificate != null && http_listener.value.host_names != null)
       ssl_certificate_name           = http_listener.value.ssl_certificate
       host_name                      = http_listener.value.host_name
       host_names                     = http_listener.value.host_names
@@ -495,7 +496,7 @@ resource "azurerm_application_gateway" "this" {
     content {
       name                = trusted_root_certificate.value.name
       data                = trusted_root_certificate.value.data
-      key_vault_secret_id = trusted_root_certificate.value.data == null ? data.azurerm_key_vault_secret.this[trusted_root_certificate.value.name].id : null
+      key_vault_secret_id = trusted_root_certificate.value.data == null ? try(data.azurerm_key_vault_certificate.this[trusted_root_certificate.value.name].versionless_secret_id, trusted_root_certificate.value.key_vault_secret_id) : null
     }
   }
 
