@@ -340,7 +340,7 @@ resource "azurerm_windows_web_app" "this" {
     ignore_changes = [
       # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
-      site_config["application_stack"],
+      site_config[0].application_stack,
     ]
   }
 }
