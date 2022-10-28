@@ -141,6 +141,7 @@ locals {
     }
   }
 
+  appinsights_defaults     = yamldecode(file("${path.module}/appinsights_defaults.yml"))
   database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
   database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.database_server_fqdn, local.config.database.server_port, local.config.database.name), null)
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
@@ -265,25 +266,13 @@ resource "azurerm_linux_web_app" "this" {
 
   app_settings = merge(
     {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-      "SERVER_SERVLET_CONTEXT_PATH"         = "/"
-      "SPRING_DATASOURCE_URL"               = local.database_jdbc_string
-
-      // Monitoring with Azure Application Insights
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
-      "APPINSIGHTS_PROFILERFEATURE_VERSION"             = "1.0.0"
-      "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"             = "1.0.0"
-      "APPLICATIONINSIGHTS_CONFIGURATION_CONTENT"       = local.config.insights.config_content != null ? jsonencode(local.config.insights.config_content) : null
-      "ApplicationInsightsAgent_EXTENSION_VERSION"      = "~2"
-      "DiagnosticServices_EXTENSION_VERSION"            = "~3"
-      "InstrumentationEngine_EXTENSION_VERSION"         = "disabled"
-      "SnapshotDebugger_EXTENSION_VERSION"              = "disabled"
-      "XDT_MicrosoftApplicationInsights_BaseExtensions" = "disabled"
-      "XDT_MicrosoftApplicationInsights_Java"           = "1"
-      "XDT_MicrosoftApplicationInsights_Mode"           = "recommended"
-      "XDT_MicrosoftApplicationInsights_NodeJS"         = "1"
-      "XDT_MicrosoftApplicationInsights_PreemptSdk"     = "disabled"
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
+      "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
+      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
+      "SPRING_PROFILES_ACTIVE"                = var.environment
+      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
+    local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
 }
@@ -364,25 +353,12 @@ resource "azurerm_windows_web_app" "this" {
 
   app_settings = merge(
     {
-      "SERVER_SERVLET_CONTEXT_PATH"         = "/"
-      "SPRING_PROFILES_ACTIVE"              = var.environment
-      "SPRING_DATASOURCE_URL"               = local.database_jdbc_string
-
-      // Monitoring with Azure Application Insights
-      "APPLICATIONINSIGHTS_CONNECTION_STRING"           = try(azurerm_application_insights.this.0.connection_string, null)
-      "APPINSIGHTS_PROFILERFEATURE_VERSION"             = "1.0.0"
-      "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"             = "1.0.0"
-      "APPLICATIONINSIGHTS_CONFIGURATION_CONTENT"       = local.config.insights.config_content != null ? jsonencode(local.config.insights.config_content) : null
-      "ApplicationInsightsAgent_EXTENSION_VERSION"      = "~2"
-      "DiagnosticServices_EXTENSION_VERSION"            = "~3"
-      "InstrumentationEngine_EXTENSION_VERSION"         = "disabled"
-      "SnapshotDebugger_EXTENSION_VERSION"              = "disabled"
-      "XDT_MicrosoftApplicationInsights_BaseExtensions" = "disabled"
-      "XDT_MicrosoftApplicationInsights_Java"           = "1"
-      "XDT_MicrosoftApplicationInsights_Mode"           = "recommended"
-      "XDT_MicrosoftApplicationInsights_NodeJS"         = "1"
-      "XDT_MicrosoftApplicationInsights_PreemptSdk"     = "disabled"
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
+      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
+      "SPRING_PROFILES_ACTIVE"                = var.environment
+      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
+    local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
 
