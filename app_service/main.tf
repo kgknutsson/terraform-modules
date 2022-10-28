@@ -123,6 +123,11 @@ locals {
       try(local.env_config.app_service.app_settings, {})
     )
 
+    sticky_settings = {
+      app_setting_names       = try(coalescelist(concat(try(var.config.global.app_service.sticky_settings.app_setting_names, []), try(local.env_config.app_service.sticky_settings.app_setting_names, []))), null)
+      connection_string_names = try(coalescelist(concat(try(var.config.global.app_service.sticky_settings.connection_string_names, []), try(local.env_config.app_service.sticky_settings.connection_string_names, []))), null)
+    }
+
     hybrid_connections = merge(
       try(var.config.global.app_service.hybrid_connections, {}),
       try(local.env_config.app_service.hybrid_connections, {})
@@ -275,6 +280,15 @@ resource "azurerm_linux_web_app" "this" {
     local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
+
+  dynamic "sticky_settings" {
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+
+    content {
+      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      connection_string_names = sticky_settings.value.connection_string_names
+    }
+  }
 }
 
 resource "azurerm_windows_web_app" "this" {
@@ -361,6 +375,15 @@ resource "azurerm_windows_web_app" "this" {
     local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
+
+  dynamic "sticky_settings" {
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+
+    content {
+      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      connection_string_names = sticky_settings.value.connection_string_names
+    }
+  }
 
   lifecycle {
     ignore_changes = [
@@ -473,6 +496,15 @@ resource "azurerm_linux_function_app" "this" {
     },
     local.config.app_settings
   )
+
+  dynamic "sticky_settings" {
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+
+    content {
+      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      connection_string_names = sticky_settings.value.connection_string_names
+    }
+  }
 }
 
 resource "azurerm_windows_function_app" "this" {
@@ -558,4 +590,13 @@ resource "azurerm_windows_function_app" "this" {
     },
     local.config.app_settings
   )
+
+  dynamic "sticky_settings" {
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+
+    content {
+      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      connection_string_names = sticky_settings.value.connection_string_names
+    }
+  }
 }

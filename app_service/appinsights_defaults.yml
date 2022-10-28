@@ -10,3 +10,18 @@ app_settings:
   XDT_MicrosoftApplicationInsights_Mode: recommended
   XDT_MicrosoftApplicationInsights_NodeJS: 1
   XDT_MicrosoftApplicationInsights_PreemptSdk: disabled
+
+sticky_settings:
+  - APPLICATIONINSIGHTS_CONNECTION_STRING
+  - APPLICATIONINSIGHTS_CONFIGURATION_CONTENT
+  - APPINSIGHTS_PROFILERFEATURE_VERSION
+  - APPINSIGHTS_SNAPSHOTFEATURE_VERSION
+  - ApplicationInsightsAgent_EXTENSION_VERSION
+  - DiagnosticServices_EXTENSION_VERSION
+  - InstrumentationEngine_EXTENSION_VERSION
+  - SnapshotDebugger_EXTENSION_VERSION
+  - XDT_MicrosoftApplicationInsights_BaseExtensions
+  - XDT_MicrosoftApplicationInsights_Java
+  - XDT_MicrosoftApplicationInsights_Mode
+  - XDT_MicrosoftApplicationInsights_NodeJS
+  - XDT_MicrosoftApplicationInsights_PreemptSdk
