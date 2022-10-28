@@ -75,6 +75,19 @@ locals {
       v
     ) ]
 
+    scm_ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
+      {
+        action                    = null
+        headers                   = null
+        name                      = null
+        priority                  = (i + 1) * 100
+        ip_address                = null
+        service_tag               = null
+        virtual_network_subnet_id = null
+      },
+      v
+    ) ]
+
     site_config = merge(
       {
         always_on                         = true
@@ -82,6 +95,7 @@ locals {
         health_check_path                 = null
         health_check_eviction_time_in_min = null
         scm_minimum_tls_version           = null
+        scm_use_main_ip_restriction       = length(concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, []))) == 0
         use_32_bit_worker                 = false
         vnet_route_all_enabled            = try(
           var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
@@ -204,6 +218,7 @@ resource "azurerm_linux_web_app" "this" {
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
@@ -228,6 +243,20 @@ resource "azurerm_linux_web_app" "this" {
         ip_address                = ip_restriction.value.ip_address
         service_tag               = ip_restriction.value.service_tag
         virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
       }
     }
   }
@@ -286,6 +315,7 @@ resource "azurerm_windows_web_app" "this" {
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
 
@@ -311,6 +341,20 @@ resource "azurerm_windows_web_app" "this" {
         ip_address                = ip_restriction.value.ip_address
         service_tag               = ip_restriction.value.service_tag
         virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
       }
     }
   }
@@ -399,6 +443,7 @@ resource "azurerm_linux_function_app" "this" {
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
@@ -423,6 +468,20 @@ resource "azurerm_linux_function_app" "this" {
         ip_address                = ip_restriction.value.ip_address
         service_tag               = ip_restriction.value.service_tag
         virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
       }
     }
   }
@@ -468,6 +527,7 @@ resource "azurerm_windows_function_app" "this" {
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
@@ -492,6 +552,20 @@ resource "azurerm_windows_function_app" "this" {
         ip_address                = ip_restriction.value.ip_address
         service_tag               = ip_restriction.value.service_tag
         virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
       }
     }
   }
