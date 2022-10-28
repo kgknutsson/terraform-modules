@@ -94,6 +94,7 @@ locals {
         ftps_state                        = "Disabled"
         health_check_path                 = null
         health_check_eviction_time_in_min = null
+        minimum_tls_version               = null
         scm_minimum_tls_version           = null
         scm_use_main_ip_restriction       = length(concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, []))) == 0
         use_32_bit_worker                 = false
@@ -217,6 +218,7 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
@@ -314,6 +316,7 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
@@ -442,6 +445,7 @@ resource "azurerm_linux_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version                    = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
@@ -526,6 +530,7 @@ resource "azurerm_windows_function_app" "this" {
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
     health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version                    = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
