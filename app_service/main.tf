@@ -18,11 +18,17 @@ locals {
       try(local.env_config.app_service.tags, {})
     )
 
-    type                       = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
-    os_type                    = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
-    sku_name                   = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
-    worker_count               = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
-    virtual_network_subnet_id  = try(
+    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
+    os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
+    sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
+    worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    https_only                         = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
+    client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
+    client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
+    zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
+    metric_alerts                      = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
+
+    virtual_network_subnet_id = try(
       var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
       local.env_config.app_service.virtual_network_subnet_id,
       var.subnet_ids[local.env_config.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
@@ -31,11 +37,6 @@ locals {
       var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
       null
     )
-    https_only                 = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
-    client_certificate_enabled = try(local.env_config.app_service.client_certificate_enabled, var.config.global.app_service.client_certificate_enabled, null)
-    client_certificate_mode    = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null)
-    zone_balancing_enabled     = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
-    metric_alerts              = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
 
     monitor_diagnostic_setting = merge(
       {
@@ -177,15 +178,16 @@ resource "azurecaf_name" "app_service" {
 resource "azurerm_linux_web_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "WebApp" ? 1 : 0
 
-  name                       = azurecaf_name.app_service.result
-  resource_group_name        = var.resource_group
-  location                   = local.config.location
-  service_plan_id            = azurerm_service_plan.this.id
-  virtual_network_subnet_id  = local.config.virtual_network_subnet_id
-  https_only                 = local.config.https_only
-  client_certificate_enabled = local.config.client_certificate_enabled
-  client_certificate_mode    = local.config.client_certificate_mode
-  tags                       = local.config.tags
+  name                               = azurecaf_name.app_service.result
+  resource_group_name                = var.resource_group
+  location                           = local.config.location
+  service_plan_id                    = azurerm_service_plan.this.id
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -258,15 +260,16 @@ resource "azurerm_linux_web_app" "this" {
 resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
-  name                       = azurecaf_name.app_service.result
-  resource_group_name        = var.resource_group
-  location                   = local.config.location
-  service_plan_id            = azurerm_service_plan.this.id
-  virtual_network_subnet_id  = local.config.virtual_network_subnet_id
-  https_only                 = local.config.https_only
-  client_certificate_enabled = local.config.client_certificate_enabled
-  client_certificate_mode    = local.config.client_certificate_mode
-  tags                       = local.config.tags
+  name                               = azurecaf_name.app_service.result
+  resource_group_name                = var.resource_group
+  location                           = local.config.location
+  service_plan_id                    = azurerm_service_plan.this.id
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -367,18 +370,19 @@ resource "azurerm_storage_account" "this" {
 resource "azurerm_linux_function_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                        = azurecaf_name.app_service.result
-  resource_group_name         = var.resource_group
-  location                    = local.config.location
-  service_plan_id             = azurerm_service_plan.this.id
-  storage_account_name        = azurerm_storage_account.this.0.name
-  storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version = "~3"
-  virtual_network_subnet_id   = local.config.virtual_network_subnet_id
-  https_only                  = local.config.https_only
-  client_certificate_enabled  = local.config.client_certificate_enabled
-  client_certificate_mode     = local.config.client_certificate_mode
-  tags                        = local.config.tags
+  name                               = azurecaf_name.app_service.result
+  resource_group_name                = var.resource_group
+  location                           = local.config.location
+  service_plan_id                    = azurerm_service_plan.this.id
+  storage_account_name               = azurerm_storage_account.this.0.name
+  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  functions_extension_version        = "~3"
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -435,18 +439,19 @@ resource "azurerm_linux_function_app" "this" {
 resource "azurerm_windows_function_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                        = azurecaf_name.app_service.result
-  resource_group_name         = var.resource_group
-  location                    = local.config.location
-  service_plan_id             = azurerm_service_plan.this.id
-  storage_account_name        = azurerm_storage_account.this.0.name
-  storage_account_access_key  = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version = "~3"
-  virtual_network_subnet_id   = local.config.virtual_network_subnet_id
-  https_only                  = local.config.https_only
-  client_certificate_enabled  = local.config.client_certificate_enabled
-  client_certificate_mode     = local.config.client_certificate_mode
-  tags                        = local.config.tags
+  name                               = azurecaf_name.app_service.result
+  resource_group_name                = var.resource_group
+  location                           = local.config.location
+  service_plan_id                    = azurerm_service_plan.this.id
+  storage_account_name               = azurerm_storage_account.this.0.name
+  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  functions_extension_version        = "~3"
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
