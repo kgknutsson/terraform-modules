@@ -128,6 +128,11 @@ locals {
       connection_string_names = try(coalescelist(concat(try(var.config.global.app_service.sticky_settings.connection_string_names, []), try(local.env_config.app_service.sticky_settings.connection_string_names, []))), null)
     }
 
+    deployment_slots = merge(
+      try(var.config.global.app_service.deployment_slots, {}),
+      try(local.env_config.app_service.deployment_slots, {})
+    )
+
     hybrid_connections = merge(
       try(var.config.global.app_service.hybrid_connections, {}),
       try(local.env_config.app_service.hybrid_connections, {})
@@ -291,6 +296,92 @@ resource "azurerm_linux_web_app" "this" {
   }
 }
 
+resource "azurerm_linux_web_app_slot" "this" {
+  for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_web_app.this) != 0 }
+
+  name                               = each.key
+  app_service_id                     = azurerm_linux_web_app.this[0].id
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
+
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
+  }
+
+  site_config {
+    always_on                         = local.config.site_config.always_on
+    ftps_state                        = local.config.site_config.ftps_state
+    health_check_path                 = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version               = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+    auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version        = application_stack.value.java_version
+        java_server         = application_stack.value.java_server
+        java_server_version = application_stack.value.java_server_version
+      }
+    }
+
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+  }
+
+  app_settings = merge(
+    {
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
+      "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
+      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
+      "SPRING_PROFILES_ACTIVE"                = var.environment
+      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
+    },
+    local.appinsights_defaults.app_settings,
+    local.config.app_settings,
+    try(each.value.app_settings, {})
+  )
+}
+
 resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
@@ -392,6 +483,92 @@ resource "azurerm_windows_web_app" "this" {
       site_config[0].application_stack,
     ]
   }
+}
+
+resource "azurerm_windows_web_app_slot" "this" {
+  for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_web_app.this) != 0 }
+
+  name                               = each.key
+  app_service_id                     = azurerm_windows_web_app.this[0].id
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
+
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
+  }
+
+  site_config {
+    always_on                         = local.config.site_config.always_on
+    ftps_state                        = local.config.site_config.ftps_state
+    health_check_path                 = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version               = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+    auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        current_stack          = lookup(application_stack.value, "current_stack", application_stack.value.java_version != null ? "java" : null)
+        java_version           = application_stack.value.java_version
+        java_container         = application_stack.value.java_container
+        java_container_version = application_stack.value.java_container_version
+      }
+    }
+
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+  }
+
+  app_settings = merge(
+    {
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
+      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
+      "SPRING_PROFILES_ACTIVE"                = var.environment
+      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
+    },
+    local.appinsights_defaults.app_settings,
+    local.config.app_settings,
+    try(each.value.app_settings, {})
+  )
 }
 
 resource "azurecaf_name" "storage_account" {
@@ -507,6 +684,91 @@ resource "azurerm_linux_function_app" "this" {
   }
 }
 
+resource "azurerm_linux_function_app_slot" "this" {
+  for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_function_app.this) != 0 }
+
+  name                               = each.key
+  function_app_id                    = azurerm_linux_function_app.this[0].id
+  storage_account_name               = azurerm_storage_account.this.0.name
+  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  functions_extension_version        = "~3"
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
+
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
+  }
+
+  site_config {
+    always_on                              = local.config.site_config.always_on
+    ftps_state                             = local.config.site_config.ftps_state
+    health_check_path                      = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version                    = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
+    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
+    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version = application_stack.value.java_version
+      }
+    }
+
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+  }
+
+  app_settings = merge(
+    {
+      "SPRING_PROFILES_ACTIVE" = var.environment
+      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
+    },
+    local.config.app_settings,
+    try(each.value.app_settings, {})
+  )
+}
+
 resource "azurerm_windows_function_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "FunctionApp" ? 1 : 0
 
@@ -599,4 +861,89 @@ resource "azurerm_windows_function_app" "this" {
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
+}
+
+resource "azurerm_windows_function_app_slot" "this" {
+  for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_function_app.this) != 0 }
+
+  name                               = each.key
+  function_app_id                    = azurerm_windows_function_app.this[0].id
+  storage_account_name               = azurerm_storage_account.this.0.name
+  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  functions_extension_version        = "~3"
+  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  https_only                         = local.config.https_only
+  client_certificate_enabled         = local.config.client_certificate_mode != null
+  client_certificate_mode            = local.config.client_certificate_mode
+  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  tags                               = local.config.tags
+
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+    }
+  }
+
+  site_config {
+    always_on                              = local.config.site_config.always_on
+    ftps_state                             = local.config.site_config.ftps_state
+    health_check_path                      = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    minimum_tls_version                    = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
+    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
+    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "application_stack" {
+      for_each = local.config.site_config.application_stack[*]
+
+      content {
+        java_version = application_stack.value.java_version
+      }
+    }
+
+    dynamic "ip_restriction" {
+      for_each = local.config.ip_restrictions
+
+      content {
+        action                    = ip_restriction.value.action
+        headers                   = ip_restriction.value.headers
+        name                      = ip_restriction.value.name
+        priority                  = ip_restriction.value.priority
+        ip_address                = ip_restriction.value.ip_address
+        service_tag               = ip_restriction.value.service_tag
+        virtual_network_subnet_id = ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+
+    dynamic "scm_ip_restriction" {
+      for_each = { for k, v in local.config.scm_ip_restrictions : k => v if !local.config.site_config.scm_use_main_ip_restriction }
+
+      content {
+        action                    = scm_ip_restriction.value.action
+        headers                   = scm_ip_restriction.value.headers
+        name                      = scm_ip_restriction.value.name
+        priority                  = scm_ip_restriction.value.priority
+        ip_address                = scm_ip_restriction.value.ip_address
+        service_tag               = scm_ip_restriction.value.service_tag
+        virtual_network_subnet_id = scm_ip_restriction.value.virtual_network_subnet_id
+      }
+    }
+  }
+
+  app_settings = merge(
+    {
+      "SPRING_PROFILES_ACTIVE" = var.environment
+      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
+    },
+    local.config.app_settings,
+    try(each.value.app_settings, {})
+  )
 }
