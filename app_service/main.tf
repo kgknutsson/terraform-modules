@@ -151,7 +151,13 @@ locals {
     }
   }
 
-  appinsights_defaults     = yamldecode(file("${path.module}/appinsights_defaults.yml"))
+  appinsights_app_settings = length(local.config.insights.workspace_id[*]) == 0 ? {} : merge(
+    {
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.this.0.connection_string
+    },
+    yamldecode(file("${path.module}/appinsights_defaults.yml"))
+  )
+
   database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
   database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.database_server_fqdn, local.config.database.server_port, local.config.database.name), null)
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
@@ -275,22 +281,21 @@ resource "azurerm_linux_web_app" "this" {
   }
 
   app_settings = merge(
+    local.appinsights_app_settings,
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
       "SERVER_SERVLET_CONTEXT_PATH"           = "/"
       "SPRING_PROFILES_ACTIVE"                = var.environment
       "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
-    local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
 
     content {
-      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -369,14 +374,13 @@ resource "azurerm_linux_web_app_slot" "this" {
   }
 
   app_settings = merge(
+    local.appinsights_app_settings,
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
       "SERVER_SERVLET_CONTEXT_PATH"           = "/"
       "SPRING_PROFILES_ACTIVE"                = var.environment
       "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
-    local.appinsights_defaults.app_settings,
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
@@ -457,21 +461,20 @@ resource "azurerm_windows_web_app" "this" {
   }
 
   app_settings = merge(
+    local.appinsights_app_settings,
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
       "SERVER_SERVLET_CONTEXT_PATH"           = "/"
       "SPRING_PROFILES_ACTIVE"                = var.environment
       "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
-    local.appinsights_defaults.app_settings,
     local.config.app_settings
   )
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
 
     content {
-      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -559,13 +562,12 @@ resource "azurerm_windows_web_app_slot" "this" {
   }
 
   app_settings = merge(
+    local.appinsights_app_settings,
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, null)
       "SERVER_SERVLET_CONTEXT_PATH"           = "/"
       "SPRING_PROFILES_ACTIVE"                = var.environment
       "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
     },
-    local.appinsights_defaults.app_settings,
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
@@ -675,10 +677,10 @@ resource "azurerm_linux_function_app" "this" {
   )
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
 
     content {
-      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -854,10 +856,10 @@ resource "azurerm_windows_function_app" "this" {
   )
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, local.config.insights.workspace_id[*])) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
 
     content {
-      app_setting_names       = length(local.config.insights.workspace_id[*]) == 0 ? sticky_settings.value.app_setting_names : concat(coalesce(sticky_settings.value.app_setting_names, []), local.appinsights_defaults.sticky_settings)
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
