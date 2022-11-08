@@ -62,6 +62,14 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
     operator         = "GreaterThan"
     threshold        = "90"
   }
+
+  dynamic "action" {
+    for_each = local.config.action_group_ids
+
+    content {
+      action_group_id = action.value
+    }
+  }
 }
 
 resource "azurerm_monitor_metric_alert" "mem90" {
@@ -82,6 +90,14 @@ resource "azurerm_monitor_metric_alert" "mem90" {
     aggregation      = "Average"
     operator         = "GreaterThan"
     threshold        = "90"
+  }
+
+  dynamic "action" {
+    for_each = local.config.action_group_ids
+
+    content {
+      action_group_id = action.value
+    }
   }
 }
 
@@ -106,5 +122,13 @@ resource "azurerm_monitor_metric_alert" "heap80" {
 
     # Needed as sometimes the metric hasn't been reported yet
     skip_metric_validation = true
+  }
+
+  dynamic "action" {
+    for_each = local.config.action_group_ids
+
+    content {
+      action_group_id = action.value
+    }
   }
 }
