@@ -26,8 +26,11 @@ locals {
     client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
     client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
     zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
-    metric_alerts                      = try(local.env_config.app_service.metric_alerts, var.config.global.app_service.metric_alerts, true)
-    action_group_ids                   = concat(try(local.env_config.app_service.action_group_ids, []), try(var.config.global.app_service.action_group_ids, []))
+
+    metric_alerts = {
+      enabled          = try(local.env_config.app_service.metric_alerts.enabled, var.config.global.app_service.metric_alerts.enabled, true)
+      action_group_ids = concat(try(local.env_config.app_service.metric_alerts.action_group_ids, []), try(var.config.global.app_service.metric_alerts.action_group_ids, []))
+    }
 
     virtual_network_subnet_id = try(
       var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],

@@ -44,7 +44,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
 }
 
 resource "azurerm_monitor_metric_alert" "cpu90" {
-  count = local.config.metric_alerts ? 1 : 0
+  count = local.config.metric_alerts.enabled ? 1 : 0
 
   name                     = "CPU usage above threshold - ${azurerm_service_plan.this.name}"
   resource_group_name      = var.resource_group
@@ -64,7 +64,7 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
   }
 
   dynamic "action" {
-    for_each = local.config.action_group_ids
+    for_each = local.config.metric_alerts.action_group_ids
 
     content {
       action_group_id = action.value
@@ -73,7 +73,7 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
 }
 
 resource "azurerm_monitor_metric_alert" "mem90" {
-  count = local.config.metric_alerts ? 1 : 0
+  count = local.config.metric_alerts.enabled ? 1 : 0
 
   name                     = "Memory usage above threshold - ${azurerm_service_plan.this.name}"
   resource_group_name      = var.resource_group
@@ -93,7 +93,7 @@ resource "azurerm_monitor_metric_alert" "mem90" {
   }
 
   dynamic "action" {
-    for_each = local.config.action_group_ids
+    for_each = local.config.metric_alerts.action_group_ids
 
     content {
       action_group_id = action.value
@@ -102,7 +102,7 @@ resource "azurerm_monitor_metric_alert" "mem90" {
 }
 
 resource "azurerm_monitor_metric_alert" "heap80" {
-  count = min(length(local.config.insights.workspace_id[*]), local.config.metric_alerts && local.config.type == "WebApp" ? 1 : 0)
+  count = min(length(local.config.insights.workspace_id[*]), local.config.metric_alerts.enabled && local.config.type == "WebApp" ? 1 : 0)
 
   name                     = "Java heap usage above threshold - ${azurerm_application_insights.this.0.name}"
   resource_group_name      = var.resource_group
@@ -125,7 +125,7 @@ resource "azurerm_monitor_metric_alert" "heap80" {
   }
 
   dynamic "action" {
-    for_each = local.config.action_group_ids
+    for_each = local.config.metric_alerts.action_group_ids
 
     content {
       action_group_id = action.value
