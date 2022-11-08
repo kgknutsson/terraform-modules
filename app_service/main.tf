@@ -96,7 +96,7 @@ locals {
         health_check_eviction_time_in_min = null
         minimum_tls_version               = null
         scm_minimum_tls_version           = null
-        scm_use_main_ip_restriction       = length(concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, []))) == 0
+        scm_use_main_ip_restriction       = false
         use_32_bit_worker                 = false
         vnet_route_all_enabled            = try(
           var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
