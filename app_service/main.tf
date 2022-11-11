@@ -22,7 +22,9 @@ locals {
     os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
     sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
     worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    functions_extension_version        = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
     https_only                         = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
+    builtin_logging_enabled            = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
     client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
     client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
     zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
@@ -605,9 +607,10 @@ resource "azurerm_linux_function_app" "this" {
   service_plan_id                    = azurerm_service_plan.this.id
   storage_account_name               = azurerm_storage_account.this.0.name
   storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version        = "~3"
+  functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
+  builtin_logging_enabled            = local.config.builtin_logging_enabled
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
@@ -697,9 +700,10 @@ resource "azurerm_linux_function_app_slot" "this" {
   function_app_id                    = azurerm_linux_function_app.this[0].id
   storage_account_name               = azurerm_storage_account.this.0.name
   storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version        = "~3"
+  functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
+  builtin_logging_enabled            = local.config.builtin_logging_enabled
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
@@ -784,8 +788,9 @@ resource "azurerm_windows_function_app" "this" {
   service_plan_id                    = azurerm_service_plan.this.id
   storage_account_name               = azurerm_storage_account.this.0.name
   storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version        = "~3"
+  functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  builtin_logging_enabled            = local.config.builtin_logging_enabled
   https_only                         = local.config.https_only
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
@@ -876,9 +881,10 @@ resource "azurerm_windows_function_app_slot" "this" {
   function_app_id                    = azurerm_windows_function_app.this[0].id
   storage_account_name               = azurerm_storage_account.this.0.name
   storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
-  functions_extension_version        = "~3"
+  functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
+  builtin_logging_enabled            = local.config.builtin_logging_enabled
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
