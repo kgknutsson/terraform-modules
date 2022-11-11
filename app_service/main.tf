@@ -487,6 +487,7 @@ resource "azurerm_windows_web_app" "this" {
 
   lifecycle {
     ignore_changes = [
+      logs,
       # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
       site_config[0].application_stack,
@@ -577,6 +578,15 @@ resource "azurerm_windows_web_app_slot" "this" {
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
+
+  lifecycle {
+    ignore_changes = [
+      logs,
+      # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
+      site_config[0].application_stack,
+    ]
+  }
 }
 
 resource "azurecaf_name" "storage_account" {
