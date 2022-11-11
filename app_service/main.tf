@@ -159,7 +159,7 @@ locals {
     {
       "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.this.0.connection_string
     },
-    yamldecode(file("${path.module}/appinsights_defaults.yml"))
+    local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
   )
 
   database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
