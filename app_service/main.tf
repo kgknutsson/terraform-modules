@@ -94,6 +94,11 @@ locals {
       v
     ) ]
 
+    service_connections = merge(
+      try(var.config.global.app_service.service_connections, {}),
+      try(local.env_config.app_service.service_connections, {})
+    )
+
     site_config = merge(
       {
         always_on                         = true
@@ -305,6 +310,13 @@ resource "azurerm_linux_web_app" "this" {
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      logs,
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+    ]
+  }
 }
 
 resource "azurerm_linux_web_app_slot" "this" {
@@ -390,6 +402,13 @@ resource "azurerm_linux_web_app_slot" "this" {
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
+
+  lifecycle {
+    ignore_changes = [
+      logs,
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+    ]
+  }
 }
 
 resource "azurerm_windows_web_app" "this" {
@@ -491,6 +510,7 @@ resource "azurerm_windows_web_app" "this" {
       # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
       site_config[0].application_stack,
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
     ]
   }
 }
@@ -585,7 +605,24 @@ resource "azurerm_windows_web_app_slot" "this" {
       # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
       site_config[0].application_stack,
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
     ]
+  }
+}
+
+resource "azurerm_app_service_connection" "this" {
+  for_each = local.config.service_connections
+
+  name               = each.key
+  app_service_id     = try(azurerm_linux_web_app.this.0, azurerm_windows_web_app.this.0).id
+  target_resource_id = each.value.target_resource_id
+  client_type        = each.value.client_type
+  vnet_solution      = each.value.vnet_solution
+
+  authentication {
+    type            = try(each.value.authentication.type, "systemAssignedIdentity")
+    client_id       = try(each.value.authentication.client_id, null)
+    subscription_id = try(each.value.authentication.subscription_id, null)
   }
 }
 
