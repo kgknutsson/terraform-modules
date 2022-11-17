@@ -31,6 +31,15 @@ locals {
       ip_rules                   = setunion(try(local.env_config.storage_account.network_rules.ip_rules, []), try(var.config.global.storage_account.network_rules.ip_rules, []))
       virtual_network_subnet_ids = [ for i in setunion(try(local.env_config.storage_account.network_rules.virtual_network_subnet_ids, []), try(var.config.global.storage_account.network_rules.virtual_network_subnet_ids, [])) : try(var.subnet_ids[i], i)]
     }
+
+    storage_containers = { for k in setunion(keys(try(local.env_config.storage_account.storage_containers, {})), keys(try(var.config.global.storage_account.storage_containers, {}))) : k => merge(
+      {
+        container_access_type = null
+        metadata              = null
+      },
+      try(var.config.global.storage_account.storage_containers[k], {}),
+      try(local.env_config.storage_account.storage_containers[k], {})
+    ) }
   }
 }
 
@@ -63,4 +72,13 @@ resource "azurerm_storage_account" "this" {
       virtual_network_subnet_ids = network_rules.value.virtual_network_subnet_ids
     }
   }
+}
+
+resource "azurerm_storage_container" "this" {
+  for_each = local.config.storage_containers
+
+  name                  = each.key
+  storage_account_name  = azurerm_storage_account.this.name
+  container_access_type = each.value.container_access_type
+  metadata              = each.value.metadata
 }
