@@ -118,15 +118,20 @@ locals {
           var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
           null
         ) != null
-
-        application_stack = {
-          java_version           = 11
-          java_container         = "JAVA"
-          java_container_version = "SE"
-        }
       },
       try(var.config.global.app_service.site_config, {}),
-      try(local.env_config.app_service.site_config, {})
+      try(local.env_config.app_service.site_config, {}),
+      {
+        application_stack = merge(
+          {
+            java_version           = 11
+            java_container         = "JAVA"
+            java_container_version = "SE"
+          },
+          try(var.config.global.app_service.site_config.application_stack, {}),
+          try(local.env_config.app_service.site_config.application_stack, {})
+        )
+      }
     )
 
     app_settings = merge(
