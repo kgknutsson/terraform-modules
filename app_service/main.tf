@@ -541,9 +541,6 @@ resource "azurerm_windows_web_app" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
-      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
-      site_config[0].application_stack,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       # Temporary fix to avoid recurring changes to cors until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/19323
@@ -648,9 +645,6 @@ resource "azurerm_windows_web_app_slot" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      # Temporary fix to allow for manually setting java version 17 until this is fixed in the azurerm provider.
-      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
-      site_config[0].application_stack,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
     ]
   }
