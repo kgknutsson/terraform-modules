@@ -118,6 +118,8 @@ locals {
           var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
           null
         ) != null
+
+        cors = null
       },
       try(var.config.global.app_service.site_config, {}),
       try(local.env_config.app_service.site_config, {}),
@@ -267,6 +269,15 @@ resource "azurerm_linux_web_app" "this" {
       }
     }
 
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
+      }
+    }
+
     dynamic "ip_restriction" {
       for_each = local.config.ip_restrictions
 
@@ -367,6 +378,15 @@ resource "azurerm_linux_web_app_slot" "this" {
       }
     }
 
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
+      }
+    }
+
     dynamic "ip_restriction" {
       for_each = local.config.ip_restrictions
 
@@ -461,6 +481,15 @@ resource "azurerm_windows_web_app" "this" {
       }
     }
 
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
+      }
+    }
+
     dynamic "ip_restriction" {
       for_each = local.config.ip_restrictions
 
@@ -516,6 +545,9 @@ resource "azurerm_windows_web_app" "this" {
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/17144
       site_config[0].application_stack,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      # Temporary fix to avoid recurring changes to cors until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/19323
+      site_config.0.cors,
     ]
   }
 }
@@ -561,6 +593,15 @@ resource "azurerm_windows_web_app_slot" "this" {
         java_version           = application_stack.value.java_version
         java_container         = application_stack.value.java_container
         java_container_version = application_stack.value.java_container_version
+      }
+    }
+
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
       }
     }
 
@@ -698,6 +739,15 @@ resource "azurerm_linux_function_app" "this" {
       }
     }
 
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
+      }
+    }
+
     dynamic "ip_restriction" {
       for_each = local.config.ip_restrictions
 
@@ -792,6 +842,15 @@ resource "azurerm_linux_function_app_slot" "this" {
       }
     }
 
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
+      }
+    }
+
     dynamic "ip_restriction" {
       for_each = local.config.ip_restrictions
 
@@ -876,6 +935,15 @@ resource "azurerm_windows_function_app" "this" {
 
       content {
         java_version = application_stack.value.java_version
+      }
+    }
+
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
       }
     }
 
@@ -970,6 +1038,15 @@ resource "azurerm_windows_function_app_slot" "this" {
 
       content {
         java_version = application_stack.value.java_version
+      }
+    }
+
+    dynamic "cors" {
+      for_each = local.config.site_config.cors[*]
+
+      content {
+        allowed_origins     = cors.value.allowed_origins
+        support_credentials = cors.value.support_credentials
       }
     }
 
