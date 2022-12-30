@@ -51,6 +51,16 @@ variable "tags" {
   }
 }
 
+variable "service_plan_id" {
+  type        = string
+  description = <<-EOT
+  (Optional) Service Plan which will be used to host this app.
+
+  Service Plan created outside this module.
+  EOT
+  default     = null
+}
+
 variable "subnet_ids" {
   type        = map(string)
   description = <<-EOT
@@ -61,3 +71,15 @@ variable "subnet_ids" {
   default     = {}
 }
 
+variable "storage_account" {
+  type        = object({
+    name       = string
+    access_key = string
+  })
+  description = <<-EOT
+  (Optional) The backend storage account which will be used by this Function App.
+
+  Storage Account created outside this module.
+  EOT
+  default     = null
+}

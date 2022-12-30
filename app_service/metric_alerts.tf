@@ -44,13 +44,13 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
 }
 
 resource "azurerm_monitor_metric_alert" "cpu90" {
-  count = local.config.metric_alerts.enabled ? 1 : 0
+  count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
 
-  name                     = "CPU usage above threshold - ${azurerm_service_plan.this.name}"
+  name                     = "CPU usage above threshold - ${azurerm_service_plan.this.0.name}"
   resource_group_name      = var.resource_group
   target_resource_location = local.config.location
   tags                     = local.config.tags
-  scopes                   = [azurerm_service_plan.this.id]
+  scopes                   = [azurerm_service_plan.this.0.id]
   description              = "Whenever the average cpu percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"
@@ -73,13 +73,13 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
 }
 
 resource "azurerm_monitor_metric_alert" "mem90" {
-  count = local.config.metric_alerts.enabled ? 1 : 0
+  count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
 
-  name                     = "Memory usage above threshold - ${azurerm_service_plan.this.name}"
+  name                     = "Memory usage above threshold - ${azurerm_service_plan.this.0.name}"
   resource_group_name      = var.resource_group
   target_resource_location = local.config.location
   tags                     = local.config.tags
-  scopes                   = [azurerm_service_plan.this.id]
+  scopes                   = [azurerm_service_plan.this.0.id]
   description              = "Whenever the avg memory percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"

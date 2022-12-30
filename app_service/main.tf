@@ -1,3 +1,13 @@
+moved {
+  from = azurecaf_name.service_plan
+  to   = azurecaf_name.service_plan.0
+}
+
+moved {
+  from = azurerm_service_plan.this
+  to   = azurerm_service_plan.this.0
+}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
@@ -19,6 +29,7 @@ locals {
     )
 
     type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
+    service_plan_id                    = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.service_plan_id)
     os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
     sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
     worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
@@ -182,13 +193,17 @@ locals {
 }
 
 resource "azurecaf_name" "service_plan" {
+  count = local.config.service_plan_id == null ? 1 : 0
+
   name          = local.config.name
   resource_type = "azurerm_app_service_plan"
   suffixes      = [var.environment]
 }
 
 resource "azurerm_service_plan" "this" {
-  name                   = azurecaf_name.service_plan.result
+  count = local.config.service_plan_id == null ? 1 : 0
+
+  name                   = azurecaf_name.service_plan.0.result
   resource_group_name    = var.resource_group
   location               = local.config.location
   tags                   = local.config.tags
@@ -231,7 +246,7 @@ resource "azurerm_linux_web_app" "this" {
   name                               = azurecaf_name.app_service.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
-  service_plan_id                    = azurerm_service_plan.this.id
+  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
   client_certificate_enabled         = local.config.client_certificate_mode != null
@@ -442,7 +457,7 @@ resource "azurerm_windows_web_app" "this" {
   name                               = azurecaf_name.app_service.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
-  service_plan_id                    = azurerm_service_plan.this.id
+  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
   client_certificate_enabled         = local.config.client_certificate_mode != null
@@ -667,7 +682,7 @@ resource "azurerm_app_service_connection" "this" {
 }
 
 resource "azurecaf_name" "storage_account" {
-  count = local.config.type == "FunctionApp" ? 1 : 0
+  count = local.config.type == "FunctionApp" && var.storage_account == null ? 1 : 0
 
   name          = local.config.name
   resource_type = "azurerm_storage_account"
@@ -691,9 +706,9 @@ resource "azurerm_linux_function_app" "this" {
   name                               = azurecaf_name.app_service.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
-  service_plan_id                    = azurerm_service_plan.this.id
-  storage_account_name               = azurerm_storage_account.this.0.name
-  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  storage_account_name               = var.storage_account != null ? var.storage_account.name : azurerm_storage_account.this.0.name
+  storage_account_access_key         = var.storage_account != null ? var.storage_account.access_key : azurerm_storage_account.this.0.primary_access_key
   functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
@@ -890,9 +905,9 @@ resource "azurerm_windows_function_app" "this" {
   name                               = azurecaf_name.app_service.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
-  service_plan_id                    = azurerm_service_plan.this.id
-  storage_account_name               = azurerm_storage_account.this.0.name
-  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  storage_account_name               = var.storage_account != null ? var.storage_account.name : azurerm_storage_account.this.0.name
+  storage_account_access_key         = var.storage_account != null ? var.storage_account.access_key : azurerm_storage_account.this.0.primary_access_key
   functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   builtin_logging_enabled            = local.config.builtin_logging_enabled
