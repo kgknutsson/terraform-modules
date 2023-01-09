@@ -8,6 +8,11 @@ moved {
   to   = azurerm_service_plan.this.0
 }
 
+moved {
+  from = azurecaf_name.app_service
+  to   = azurecaf_name.app_service.0
+}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
@@ -28,7 +33,7 @@ locals {
       try(local.env_config.app_service.tags, {})
     )
 
-    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp or FunctionApp
+    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp, FunctionApp or NoApp
     service_plan_id                    = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.service_plan_id)
     os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
     sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
@@ -235,6 +240,8 @@ resource "azurerm_application_insights" "this" {
 }
 
 resource "azurecaf_name" "app_service" {
+  count = local.config.type == "NoApp" ? 0 : 1
+
   name          = local.config.name
   resource_type = local.config.type == "WebApp" ? "azurerm_app_service" : "azurerm_function_app"
   suffixes      = [var.environment]
@@ -243,7 +250,7 @@ resource "azurecaf_name" "app_service" {
 resource "azurerm_linux_web_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "WebApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.result
+  name                               = azurecaf_name.app_service.0.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
@@ -454,7 +461,7 @@ resource "azurerm_linux_web_app_slot" "this" {
 resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.result
+  name                               = azurecaf_name.app_service.0.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
@@ -703,7 +710,7 @@ resource "azurerm_storage_account" "this" {
 resource "azurerm_linux_function_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.result
+  name                               = azurecaf_name.app_service.0.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
@@ -902,7 +909,7 @@ resource "azurerm_linux_function_app_slot" "this" {
 resource "azurerm_windows_function_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.result
+  name                               = azurecaf_name.app_service.0.result
   resource_group_name                = var.resource_group
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id

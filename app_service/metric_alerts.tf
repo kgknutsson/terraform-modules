@@ -1,23 +1,22 @@
-locals {
-  resource_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
-}
-
 data "azurerm_monitor_diagnostic_categories" "this" {
-  resource_id = local.resource_id
-}
-
-resource "azurerm_monitor_diagnostic_setting" "this" {
   count = min(
+    length(concat(azurerm_windows_web_app.this, azurerm_linux_web_app.this, azurerm_windows_function_app.this, azurerm_linux_function_app.this)),
     length(local.config.insights.workspace_id[*]),
     try(length(local.config.monitor_diagnostic_setting.log_category_types) + length(local.config.monitor_diagnostic_setting.metrics), 1)
   )
 
+  resource_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
+}
+
+resource "azurerm_monitor_diagnostic_setting" "this" {
+  count = length(data.azurerm_monitor_diagnostic_categories.this)
+
   name                       = "SendToLogAnalytics"
-  target_resource_id         = local.resource_id
+  target_resource_id         = data.azurerm_monitor_diagnostic_categories.this.0.resource_id
   log_analytics_workspace_id = local.config.insights.workspace_id
 
   dynamic "log" {
-    for_each = coalesce(local.config.monitor_diagnostic_setting.log_category_types, data.azurerm_monitor_diagnostic_categories.this.log_category_types)
+    for_each = coalesce(local.config.monitor_diagnostic_setting.log_category_types, data.azurerm_monitor_diagnostic_categories.this.0.log_category_types)
 
     content {
       category = log.value
@@ -30,7 +29,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
   }
 
   dynamic "metric" {
-    for_each = coalesce(local.config.monitor_diagnostic_setting.metrics, data.azurerm_monitor_diagnostic_categories.this.metrics)
+    for_each = coalesce(local.config.monitor_diagnostic_setting.metrics, data.azurerm_monitor_diagnostic_categories.this.0.metrics)
 
     content {
       category = metric.value
