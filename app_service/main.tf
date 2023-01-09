@@ -185,12 +185,18 @@ locals {
     }
   }
 
-  appinsights_app_settings = length(local.config.insights.workspace_id[*]) == 0 ? {} : merge(
+  appinsights_app_settings = local.config.insights.workspace_id == null ? {} : merge(
     {
       "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.this.0.connection_string
     },
     local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
   )
+
+  java_app_settings = local.config.site_config.application_stack.java_version == null ? {} : {
+    "SERVER_SERVLET_CONTEXT_PATH" = local.config.type == "WebApp" ? "/" : null
+    "SPRING_PROFILES_ACTIVE"      = var.environment
+    "SPRING_DATASOURCE_URL"       = local.database_jdbc_string
+  }
 
   database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
   database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.database_server_fqdn, local.config.database.server_port, local.config.database.name), null)
@@ -331,11 +337,9 @@ resource "azurerm_linux_web_app" "this" {
 
   app_settings = merge(
     local.appinsights_app_settings,
+    local.java_app_settings,
     {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
-      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
-      "SPRING_PROFILES_ACTIVE"                = var.environment
-      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
+      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     },
     local.config.app_settings
   )
@@ -440,11 +444,9 @@ resource "azurerm_linux_web_app_slot" "this" {
 
   app_settings = merge(
     local.appinsights_app_settings,
+    local.java_app_settings,
     {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
-      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
-      "SPRING_PROFILES_ACTIVE"                = var.environment
-      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
+      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     },
     local.config.app_settings,
     try(each.value.app_settings, {})
@@ -543,11 +545,7 @@ resource "azurerm_windows_web_app" "this" {
 
   app_settings = merge(
     local.appinsights_app_settings,
-    {
-      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
-      "SPRING_PROFILES_ACTIVE"                = var.environment
-      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings
   )
 
@@ -655,11 +653,7 @@ resource "azurerm_windows_web_app_slot" "this" {
 
   app_settings = merge(
     local.appinsights_app_settings,
-    {
-      "SERVER_SERVLET_CONTEXT_PATH"           = "/"
-      "SPRING_PROFILES_ACTIVE"                = var.environment
-      "SPRING_DATASOURCE_URL"                 = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
@@ -794,10 +788,7 @@ resource "azurerm_linux_function_app" "this" {
   }
 
   app_settings = merge(
-    {
-      "SPRING_PROFILES_ACTIVE" = var.environment
-      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings
   )
 
@@ -897,10 +888,7 @@ resource "azurerm_linux_function_app_slot" "this" {
   }
 
   app_settings = merge(
-    {
-      "SPRING_PROFILES_ACTIVE" = var.environment
-      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
@@ -993,10 +981,7 @@ resource "azurerm_windows_function_app" "this" {
   }
 
   app_settings = merge(
-    {
-      "SPRING_PROFILES_ACTIVE" = var.environment
-      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings
   )
 
@@ -1096,10 +1081,7 @@ resource "azurerm_windows_function_app_slot" "this" {
   }
 
   app_settings = merge(
-    {
-      "SPRING_PROFILES_ACTIVE" = var.environment
-      "SPRING_DATASOURCE_URL"  = local.database_jdbc_string
-    },
+    local.java_app_settings,
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
