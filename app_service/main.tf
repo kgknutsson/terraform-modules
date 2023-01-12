@@ -204,7 +204,7 @@ locals {
 }
 
 resource "azurecaf_name" "service_plan" {
-  count = local.config.service_plan_id == null ? 1 : 0
+  count = local.config.sku_name == null ? 0 : 1
 
   name          = local.config.name
   resource_type = "azurerm_app_service_plan"
@@ -212,7 +212,7 @@ resource "azurecaf_name" "service_plan" {
 }
 
 resource "azurerm_service_plan" "this" {
-  count = local.config.service_plan_id == null ? 1 : 0
+  count = length(azurecaf_name.service_plan)
 
   name                   = azurecaf_name.service_plan.0.result
   resource_group_name    = var.resource_group
