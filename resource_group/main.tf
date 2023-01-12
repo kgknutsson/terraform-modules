@@ -2,7 +2,7 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
+    name     = try(var.config.global.resource_group.name, var.config.global.name)
     location = var.config.global.location
 
     tags = merge(
