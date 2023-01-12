@@ -2,6 +2,16 @@ locals {
   default_hostname = try(try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).default_hostname, null)
 }
 
+output "service_plan_id" {
+  value = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  description = "Service plan that hosts the application."
+}
+
+output "application_insights_connection_string" {
+  value       = var.application_insights_connection_string != null ? var.application_insights_connection_string : azurerm_application_insights.this.0.connection_string
+  description = "Application insights resource connected to the application."
+}
+
 output "application_hostname" {
   value       = try("https://${local.default_hostname}", null)
   description = "The web application URL."

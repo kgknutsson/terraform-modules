@@ -61,6 +61,16 @@ variable "service_plan_id" {
   default     = null
 }
 
+variable "application_insights_connection_string" {
+  type        = string
+  description = <<-EOT
+  (Optional) Application Insights connection string.
+
+  Application Insights resource created outside this module.
+  EOT
+  default     = null
+}
+
 variable "subnet_ids" {
   type        = map(string)
   description = <<-EOT
