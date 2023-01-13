@@ -143,8 +143,6 @@ locals {
         application_stack = merge(
           {
             java_version           = 11
-            java_container         = "JAVA"
-            java_container_version = "SE"
           },
           try(var.config.global.app_service.site_config.application_stack, {}),
           try(local.env_config.app_service.site_config.application_stack, {})
@@ -292,8 +290,8 @@ resource "azurerm_linux_web_app" "this" {
 
       content {
         java_version        = application_stack.value.java_version
-        java_server         = application_stack.value.java_server
-        java_server_version = application_stack.value.java_server_version
+        java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
+        java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
       }
     }
 
@@ -399,8 +397,8 @@ resource "azurerm_linux_web_app_slot" "this" {
 
       content {
         java_version        = application_stack.value.java_version
-        java_server         = application_stack.value.java_server
-        java_server_version = application_stack.value.java_server_version
+        java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
+        java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
       }
     }
 
@@ -498,10 +496,8 @@ resource "azurerm_windows_web_app" "this" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        current_stack          = lookup(application_stack.value, "current_stack", application_stack.value.java_version != null ? "java" : null)
-        java_version           = application_stack.value.java_version
-        java_container         = application_stack.value.java_container
-        java_container_version = application_stack.value.java_container_version
+        java_version                 = application_stack.value.java_version
+        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null)
       }
     }
 
@@ -606,10 +602,8 @@ resource "azurerm_windows_web_app_slot" "this" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        current_stack          = lookup(application_stack.value, "current_stack", application_stack.value.java_version != null ? "java" : null)
-        java_version           = application_stack.value.java_version
-        java_container         = application_stack.value.java_container
-        java_container_version = application_stack.value.java_container_version
+        java_version                 = application_stack.value.java_version
+        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null)
       }
     }
 
