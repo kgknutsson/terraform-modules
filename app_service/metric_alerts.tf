@@ -15,11 +15,11 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
   target_resource_id         = data.azurerm_monitor_diagnostic_categories.this.0.resource_id
   log_analytics_workspace_id = local.config.insights.workspace_id
 
-  dynamic "log" {
+  dynamic "enabled_log" {
     for_each = coalesce(local.config.monitor_diagnostic_setting.log_category_types, data.azurerm_monitor_diagnostic_categories.this.0.log_category_types)
 
     content {
-      category = log.value
+      category = enabled_log.value
 
       retention_policy {
         days    = 0
