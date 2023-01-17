@@ -121,6 +121,8 @@ locals {
         ftps_state                        = "Disabled"
         health_check_path                 = null
         health_check_eviction_time_in_min = 10
+        auto_heal_enabled                 = null
+        auto_heal_setting                 = null
         minimum_tls_version               = null
         scm_minimum_tls_version           = null
         scm_use_main_ip_restriction       = false
@@ -279,11 +281,58 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+
+    dynamic "auto_heal_setting" {
+      for_each = local.config.site_config.auto_heal_setting[*]
+
+      content {
+        action {
+          action_type                    = auto_heal_setting.value.action.action_type
+          minimum_process_execution_time = try(auto_heal_setting.value.action.minimum_process_execution_time, null)
+        }
+
+        trigger {
+          dynamic "requests" {
+            for_each = try(auto_heal_setting.value.trigger.requests[*], {})
+
+            content {
+              count    = requests.value.count
+              interval = requests.value.interval
+            }
+          }
+
+          dynamic "slow_request" {
+            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+            }
+          }
+
+          dynamic "status_code" {
+            for_each = try(auto_heal_setting.value.trigger.status_codes, [])
+
+            content {
+              count             = status_code.value.count
+              interval          = status_code.value.interval
+              status_code_range = status_code.value.status_code_range
+              path              = try(status_code.value.path, null)
+              sub_status        = try(status_code.value.sub_status, null)
+              win32_status      = try(status_code.value.win32_status, null)
+            }
+          }
+        }
+      }
+    }
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
@@ -385,12 +434,59 @@ resource "azurerm_linux_web_app_slot" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
     auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "auto_heal_setting" {
+      for_each = local.config.site_config.auto_heal_setting[*]
+
+      content {
+        action {
+          action_type                    = auto_heal_setting.value.action.action_type
+          minimum_process_execution_time = try(auto_heal_setting.value.action.minimum_process_execution_time, null)
+        }
+
+        trigger {
+          dynamic "requests" {
+            for_each = try(auto_heal_setting.value.trigger.requests[*], {})
+
+            content {
+              count    = requests.value.count
+              interval = requests.value.interval
+            }
+          }
+
+          dynamic "slow_request" {
+            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+            }
+          }
+
+          dynamic "status_code" {
+            for_each = try(auto_heal_setting.value.trigger.status_codes, [])
+
+            content {
+              count             = status_code.value.count
+              interval          = status_code.value.interval
+              status_code_range = status_code.value.status_code_range
+              path              = try(status_code.value.path, null)
+              sub_status        = try(status_code.value.sub_status, null)
+              win32_status      = try(status_code.value.win32_status, null)
+            }
+          }
+        }
+      }
+    }
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
@@ -486,11 +582,69 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+
+    dynamic "auto_heal_setting" {
+      for_each = local.config.site_config.auto_heal_setting[*]
+
+      content {
+        action {
+          action_type                    = auto_heal_setting.value.action.action_type
+          minimum_process_execution_time = try(auto_heal_setting.value.action.minimum_process_execution_time, null)
+
+          dynamic "custom_action" {
+            for_each = try(auto_heal_setting.value.custom_action, {})
+
+            content {
+              executable = custom_action.value.executable
+              parameters = custom_action.value.parameters
+            }
+          }
+        }
+
+        trigger {
+          private_memory_kb = try(auto_heal_setting.value.trigger.private_memory_kb, null)
+
+          dynamic "requests" {
+            for_each = try(auto_heal_setting.value.trigger.requests[*], {})
+
+            content {
+              count    = requests.value.count
+              interval = requests.value.interval
+            }
+          }
+
+          dynamic "slow_request" {
+            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+            }
+          }
+
+          dynamic "status_code" {
+            for_each = try(auto_heal_setting.value.trigger.status_codes, [])
+
+            content {
+              count             = status_code.value.count
+              interval          = status_code.value.interval
+              status_code_range = status_code.value.status_code_range
+              path              = try(status_code.value.path, null)
+              sub_status        = try(status_code.value.sub_status, null)
+              win32_status      = try(status_code.value.win32_status, null)
+            }
+          }
+        }
+      }
+    }
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
@@ -591,12 +745,70 @@ resource "azurerm_windows_web_app_slot" "this" {
     ftps_state                        = local.config.site_config.ftps_state
     health_check_path                 = local.config.site_config.health_check_path
     health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
+    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     minimum_tls_version               = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
     auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+
+    dynamic "auto_heal_setting" {
+      for_each = local.config.site_config.auto_heal_setting[*]
+
+      content {
+        action {
+          action_type                    = auto_heal_setting.value.action.action_type
+          minimum_process_execution_time = try(auto_heal_setting.value.action.minimum_process_execution_time, null)
+
+          dynamic "custom_action" {
+            for_each = try(auto_heal_setting.value.custom_action, {})
+
+            content {
+              executable = custom_action.value.executable
+              parameters = custom_action.value.parameters
+            }
+          }
+        }
+
+        trigger {
+          private_memory_kb = try(auto_heal_setting.value.trigger.private_memory_kb, null)
+
+          dynamic "requests" {
+            for_each = try(auto_heal_setting.value.trigger.requests[*], {})
+
+            content {
+              count    = requests.value.count
+              interval = requests.value.interval
+            }
+          }
+
+          dynamic "slow_request" {
+            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+            }
+          }
+
+          dynamic "status_code" {
+            for_each = try(auto_heal_setting.value.trigger.status_codes, [])
+
+            content {
+              count             = status_code.value.count
+              interval          = status_code.value.interval
+              status_code_range = status_code.value.status_code_range
+              path              = try(status_code.value.path, null)
+              sub_status        = try(status_code.value.sub_status, null)
+              win32_status      = try(status_code.value.win32_status, null)
+            }
+          }
+        }
+      }
+    }
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
