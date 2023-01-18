@@ -120,7 +120,7 @@ locals {
         always_on                         = true
         ftps_state                        = "Disabled"
         health_check_path                 = null
-        health_check_eviction_time_in_min = null
+        health_check_eviction_time_in_min = 10
         minimum_tls_version               = null
         scm_minimum_tls_version           = null
         scm_use_main_ip_restriction       = false
