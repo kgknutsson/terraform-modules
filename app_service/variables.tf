@@ -93,3 +93,23 @@ variable "storage_account" {
   EOT
   default     = null
 }
+
+variable "app_service_identity_ids" {
+  type        = list(string)
+  description = <<-EOT
+  (Optional) The id of the identity which will be used by this App.
+
+  Identity is created outside this module.
+  EOT
+  default     = null
+}
+
+variable "app_service_identity_client_ids" {
+  type        = list(string)
+  description = <<-EOT
+  (Optional) The client id of the identity which will be used by this App.
+
+  Identity is created outside this module.
+  EOT
+  default     = null
+}

@@ -26,3 +26,8 @@ output "database_jdbc_string" {
   value       = local.database_jdbc_basestring
   description = "Database URL."
 }
+
+output "id" {
+  value       = try(azurerm_windows_web_app.this.0.id, azurerm_linux_web_app.this.0.id, azurerm_windows_function_app.this.0.id, azurerm_linux_function_app.this.0.id)
+  description = "The ID of the application."
+}
