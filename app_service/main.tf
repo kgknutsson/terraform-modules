@@ -81,7 +81,7 @@ locals {
 
     identity = {
       type         = try(local.env_config.app_service.identity.type, var.config.global.app_service.identity.type, "UserAssigned")
-      identity_ids = concat(try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
+      identity_ids = concat(try(var.app_service_identity_ids, []), try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
     }
 
     ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
@@ -141,9 +141,6 @@ locals {
       try(local.env_config.app_service.site_config, {}),
       {
         application_stack = merge(
-          {
-            java_version           = 11
-          },
           try(var.config.global.app_service.site_config.application_stack, {}),
           try(local.env_config.app_service.site_config.application_stack, {})
         )
@@ -190,11 +187,11 @@ locals {
     local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
   )
 
-  java_app_settings = local.config.site_config.application_stack.java_version == null ? {} : {
+  java_app_settings = can(local.config.site_config.application_stack.java_version) ? {
     "SERVER_SERVLET_CONTEXT_PATH" = local.config.type == "WebApp" ? "/" : null
     "SPRING_PROFILES_ACTIVE"      = var.environment
     "SPRING_DATASOURCE_URL"       = local.database_jdbc_string
-  }
+  }: null
 
   database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
   database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.database_server_fqdn, local.config.database.server_port, local.config.database.name), null)
@@ -284,14 +281,18 @@ resource "azurerm_linux_web_app" "this" {
     scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+    container_registry_managed_identity_client_id = try(var.app_service_identity_client_ids[0], null)
+    container_registry_use_managed_identity = try(var.app_service_identity_ids[0], null) != null ? true : null
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        java_version        = application_stack.value.java_version
-        java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
+        java_version        = try(application_stack.value.java_version, null)
+        java_server         = try(application_stack.value.java_server, can(application_stack.value.java_version) ? "JAVA" : null)
         java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
+        docker_image = try(application_stack.value.docker_image, null)
+        docker_image_tag = try(application_stack.value.docker_image_tag, null)
       }
     }
 
@@ -739,7 +740,7 @@ resource "azurerm_linux_function_app" "this" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        java_version = application_stack.value.java_version
+        java_version = try(application_stack.value.java_version, null)
       }
     }
 
@@ -839,7 +840,7 @@ resource "azurerm_linux_function_app_slot" "this" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        java_version = application_stack.value.java_version
+        java_version = try(application_stack.value.java_version, null)
       }
     }
 
@@ -1009,7 +1010,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
+      type         = length(concat(var.app_service_identity_id, local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
       identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
     }
   }
@@ -1027,12 +1028,13 @@ resource "azurerm_windows_function_app_slot" "this" {
     application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
+    
 
     dynamic "application_stack" {
       for_each = local.config.site_config.application_stack[*]
 
       content {
-        java_version = application_stack.value.java_version
+        java_version = try(application_stack.value.java_version, null)
       }
     }
 
