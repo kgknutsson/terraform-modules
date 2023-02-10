@@ -17,8 +17,9 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
-    location = var.config.global.location
+    name                = var.config.global.name
+    location            = var.config.global.location
+    resource_group_name = var.resource_group.name
 
     tags = merge(
       {
@@ -33,17 +34,20 @@ locals {
       try(local.env_config.app_service.tags, {})
     )
 
-    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, "WebApp") // WebApp, FunctionApp or NoApp
-    service_plan_id                    = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.service_plan_id)
-    os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, "Windows") // Windows or Linux
-    sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, "S1")
-    worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, 1)
+    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, null) // WebApp, FunctionApp
+    service_plan_id                    = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.app_service.service_plan_id, null)
+    os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, var.app_service.service_plan_os_type, "Linux") // Linux or Windows
+    sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, null)
+    worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null)
+    storage_account_name               = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
+    storage_account_access_key         = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
     functions_extension_version        = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
     https_only                         = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
     builtin_logging_enabled            = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
     client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
     client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
     zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
+    acr_id                             = try(local.env_config.app_service.acr_id, var.config.global.app_service.acr_id, null)
 
     metric_alerts = {
       enabled          = try(local.env_config.app_service.metric_alerts.enabled, var.config.global.app_service.metric_alerts.enabled, true)
@@ -51,12 +55,10 @@ locals {
     }
 
     virtual_network_subnet_id = try(
-      var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+      var.virtual_network.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
       local.env_config.app_service.virtual_network_subnet_id,
-      var.subnet_ids[local.env_config.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
-      var.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+      var.virtual_network.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
       var.config.global.app_service.virtual_network_subnet_id,
-      var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
       null
     )
 
@@ -77,10 +79,8 @@ locals {
       config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
     }
 
-    identity_ids = concat(try(var.config.global.app_service.identity_ids, []), try(local.env_config.app_service.identity_ids, [])) // Only needed for backwards compatibility
-
     identity = {
-      type         = try(local.env_config.app_service.identity.type, var.config.global.app_service.identity.type, "UserAssigned")
+      type         = try(local.env_config.app_service.identity.type, var.config.global.app_service.identity.type, "SystemAssigned")
       identity_ids = concat(try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
     }
 
@@ -117,23 +117,24 @@ locals {
 
     site_config = merge(
       {
-        always_on                         = true
-        ftps_state                        = "Disabled"
-        health_check_path                 = null
-        health_check_eviction_time_in_min = 10
-        auto_heal_enabled                 = null
-        auto_heal_setting                 = null
-        minimum_tls_version               = null
-        scm_minimum_tls_version           = null
-        scm_use_main_ip_restriction       = false
-        use_32_bit_worker                 = false
-        vnet_route_all_enabled            = try(
-          var.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+        always_on                                     = true
+        ftps_state                                    = "Disabled"
+        health_check_path                             = null
+        health_check_eviction_time_in_min             = 10
+        auto_heal_enabled                             = null
+        auto_heal_setting                             = null
+        container_registry_managed_identity_client_id = null
+        container_registry_use_managed_identity       = null
+        minimum_tls_version                           = null
+        scm_minimum_tls_version                       = null
+        scm_use_main_ip_restriction                   = false
+        use_32_bit_worker                             = false
+
+        vnet_route_all_enabled = try(
+          var.virtual_network.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
           local.env_config.app_service.virtual_network_subnet_id,
-          var.subnet_ids[local.env_config.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
-          var.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+          var.virtual_network.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
           var.config.global.app_service.virtual_network_subnet_id,
-          var.subnet_ids[var.config.global.app_service.site_config.vnet_integration_subnet], // Kept for backwards compatibility
           null
         ) != null
 
@@ -144,10 +145,30 @@ locals {
       {
         application_stack = merge(
           {
-            java_version           = 11
+            docker                      = []
+            docker_container_name       = null
+            docker_container_registry   = null
+            docker_container_tag        = null
+            docker_image                = null
+            docker_image_tag            = null
+            dotnet_version              = null
+            use_dotnet_isolated_runtime = null
+            go_version                  = null
+            java_version                = null
+            node_version                = null
+            php_version                 = null
+            python                      = null
+            python_version              = null
+            powershell_core_version     = null
+            ruby_version                = null
           },
-          try(var.config.global.app_service.site_config.application_stack, {}),
-          try(local.env_config.app_service.site_config.application_stack, {})
+          try(
+            local.env_config.app_service.site_config.application_stack,
+            var.config.global.app_service.site_config.application_stack,
+            {
+              java_version   = 17
+            }
+          )
         )
       }
     )
@@ -173,21 +194,18 @@ locals {
     )
 
     database = {
-      server_id       = try(local.env_config.database.server_id, var.config.global.database.server_id, null) // Only needed for backwards compatibility
       server_fqdn     = try(local.env_config.database.server_fqdn, var.config.global.database.server_fqdn, null)
       server_port     = try(local.env_config.database.server_port, var.config.global.database.server_port, 1433)
       name            = try(local.env_config.database.name, var.config.global.database.name, var.config.global.name)
       jdbc_template   = try(local.env_config.database.jdbc_template, var.config.global.database.jdbc_template, "jdbc:sqlserver://%s:%s;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryMSI")
-      jdbc_properties = try(
-        merge(try(var.config.global.database.jdbc_properties, {}), try(local.env_config.database.jdbc_properties, {})),
-        { for s in concat(try(var.config.global.database.jdbc_properties, []), try(local.env_config.database.jdbc_properties, [])) : split("=", s)[0] => split("=", s)[1] } // Only needed for backwards compatibility
-      )
+      jdbc_properties = merge(try(var.config.global.database.jdbc_properties, {}), try(local.env_config.database.jdbc_properties, {}))
     }
   }
 
-  appinsights_app_settings = local.config.insights.workspace_id == null ? {} : merge(
+  appinsights_connection_string = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
+  appinsights_app_settings      = local.appinsights_connection_string == null ? {} : merge(
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.this.0.connection_string
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = local.appinsights_connection_string
     },
     local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
   )
@@ -198,8 +216,7 @@ locals {
     "SPRING_DATASOURCE_URL"       = local.database_jdbc_string
   }
 
-  database_server_fqdn     = try(coalesce(local.config.database.server_fqdn, try("${split("/", local.config.database.server_id)[8]}.database.windows.net", null)), null) // Only needed for backwards compatibility
-  database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.database_server_fqdn, local.config.database.server_port, local.config.database.name), null)
+  database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name), null)
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
 }
 
@@ -215,7 +232,7 @@ resource "azurerm_service_plan" "this" {
   count = length(azurecaf_name.service_plan)
 
   name                   = azurecaf_name.service_plan.0.result
-  resource_group_name    = var.resource_group
+  resource_group_name    = local.config.resource_group_name
   location               = local.config.location
   tags                   = local.config.tags
   os_type                = local.config.os_type
@@ -236,7 +253,7 @@ resource "azurerm_application_insights" "this" {
   count = length(azurecaf_name.application_insights)
 
   name                 = azurecaf_name.application_insights.0.result
-  resource_group_name  = var.resource_group
+  resource_group_name  = local.config.resource_group_name
   location             = local.config.location
   tags                 = local.config.tags
   application_type     = local.config.type == "WebApp" ? local.config.insights.application_type : "web"
@@ -245,8 +262,34 @@ resource "azurerm_application_insights" "this" {
   workspace_id         = local.config.insights.workspace_id
 }
 
+resource "azurecaf_name" "user_assigned_identity" {
+  count = try(endswith(local.config.identity.type, "UserAssigned"), false) && length(local.config.identity.identity_ids) == 0 ? 1 : 0
+
+  name          = local.config.name
+  resource_type = "azurerm_user_assigned_identity"
+  suffixes      = [var.environment]
+}
+
+resource "azurerm_user_assigned_identity" "this" {
+  count = length(azurecaf_name.user_assigned_identity)
+
+  name                = azurecaf_name.user_assigned_identity.0.result
+  resource_group_name = local.config.resource_group_name
+  location            = local.config.location
+  tags                = local.config.tags
+}
+
+resource "azurerm_role_assignment" "this" {
+  count = min(length(local.config.acr_id[*]), length(azurerm_user_assigned_identity.this))
+
+  scope                            = local.config.acr_id
+  role_definition_name             = "ACRPull"
+  principal_id                     = azurerm_user_assigned_identity.this.0.principal_id
+  skip_service_principal_aad_check = true
+}
+
 resource "azurecaf_name" "app_service" {
-  count = local.config.type == "NoApp" ? 0 : 1
+  count = local.config.type != null ? 1 : 0
 
   name          = local.config.name
   resource_type = local.config.type == "WebApp" ? "azurerm_app_service" : "azurerm_function_app"
@@ -257,7 +300,7 @@ resource "azurerm_linux_web_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "WebApp" ? 1 : 0
 
   name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = var.resource_group
+  resource_group_name                = local.config.resource_group_name
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
@@ -271,22 +314,24 @@ resource "azurerm_linux_web_app" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                         = local.config.site_config.always_on
-    ftps_state                        = local.config.site_config.ftps_state
-    health_check_path                 = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
-    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
-    minimum_tls_version               = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -335,12 +380,20 @@ resource "azurerm_linux_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
-        java_version        = application_stack.value.java_version
+        docker_image        = application_stack.value.docker_image
+        docker_image_tag    = application_stack.value.docker_image_tag
+        dotnet_version      = application_stack.value.dotnet_version
+        go_version          = application_stack.value.go_version
         java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
         java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
+        java_version        = application_stack.value.java_version
+        node_version        = application_stack.value.node_version
+        php_version         = application_stack.value.php_version
+        python_version      = application_stack.value.python_version
+        ruby_version        = application_stack.value.ruby_version
       }
     }
 
@@ -412,8 +465,9 @@ resource "azurerm_linux_web_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_web_app.this) != 0 }
 
   name                               = each.key
-  app_service_id                     = azurerm_linux_web_app.this[0].id
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  app_service_id                     = azurerm_linux_web_app.this.0.id
+  service_plan_id                    = try(each.value.service_plan_id, local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id)
+  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
   https_only                         = local.config.https_only
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
@@ -424,23 +478,25 @@ resource "azurerm_linux_web_app_slot" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                         = local.config.site_config.always_on
-    ftps_state                        = local.config.site_config.ftps_state
-    health_check_path                 = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
-    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
-    minimum_tls_version               = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
-    auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -489,12 +545,20 @@ resource "azurerm_linux_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
-        java_version        = application_stack.value.java_version
+        docker_image        = application_stack.value.docker_image
+        docker_image_tag    = application_stack.value.docker_image_tag
+        dotnet_version      = application_stack.value.dotnet_version
+        go_version          = application_stack.value.go_version
         java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
         java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
+        java_version        = application_stack.value.java_version
+        node_version        = application_stack.value.node_version
+        php_version         = application_stack.value.php_version
+        python_version      = application_stack.value.python_version
+        ruby_version        = application_stack.value.ruby_version
       }
     }
 
@@ -558,7 +622,7 @@ resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
   name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = var.resource_group
+  resource_group_name                = local.config.resource_group_name
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
@@ -572,22 +636,24 @@ resource "azurerm_windows_web_app" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                         = local.config.site_config.always_on
-    ftps_state                        = local.config.site_config.ftps_state
-    health_check_path                 = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
-    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
-    minimum_tls_version               = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -647,11 +713,18 @@ resource "azurerm_windows_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_container_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
+        docker_container_name        = application_stack.value.docker_container_name
+        docker_container_registry    = application_stack.value.docker_container_registry
+        docker_container_tag         = application_stack.value.docker_container_tag
+        dotnet_version               = application_stack.value.dotnet_version
+        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null ? true : null)
         java_version                 = application_stack.value.java_version
-        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null)
+        node_version                 = application_stack.value.node_version
+        php_version                  = application_stack.value.php_version
+        python                       = application_stack.value.python
       }
     }
 
@@ -723,8 +796,9 @@ resource "azurerm_windows_web_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_web_app.this) != 0 }
 
   name                               = each.key
-  app_service_id                     = azurerm_windows_web_app.this[0].id
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
+  app_service_id                     = azurerm_windows_web_app.this.0.id
+  service_plan_id                    = try(each.value.service_plan_id, local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id)
+  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
   https_only                         = local.config.https_only
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
@@ -735,23 +809,25 @@ resource "azurerm_windows_web_app_slot" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                         = local.config.site_config.always_on
-    ftps_state                        = local.config.site_config.ftps_state
-    health_check_path                 = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min = local.config.site_config.health_check_eviction_time_in_min
-    auto_heal_enabled                 = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
-    minimum_tls_version               = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version           = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction       = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                 = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled            = local.config.site_config.vnet_route_all_enabled
-    auto_swap_slot_name               = try(each.value.site_config.auto_swap_slot_name, null)
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -811,11 +887,18 @@ resource "azurerm_windows_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_container_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
+        docker_container_name        = application_stack.value.docker_container_name
+        docker_container_registry    = application_stack.value.docker_container_registry
+        docker_container_tag         = application_stack.value.docker_container_tag
+        dotnet_version               = application_stack.value.dotnet_version
+        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null ? true : null)
         java_version                 = application_stack.value.java_version
-        java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null)
+        node_version                 = application_stack.value.node_version
+        php_version                  = application_stack.value.php_version
+        python                       = application_stack.value.python
       }
     }
 
@@ -888,34 +971,15 @@ resource "azurerm_app_service_connection" "this" {
   }
 }
 
-resource "azurecaf_name" "storage_account" {
-  count = local.config.type == "FunctionApp" && var.storage_account == null ? 1 : 0
-
-  name          = local.config.name
-  resource_type = "azurerm_storage_account"
-  random_length = 10
-}
-
-resource "azurerm_storage_account" "this" {
-  count = length(azurecaf_name.storage_account)
-
-  name                     = azurecaf_name.storage_account.0.result
-  resource_group_name      = var.resource_group
-  location                 = local.config.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  tags                     = local.config.tags
-}
-
 resource "azurerm_linux_function_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" ? 1 : 0
 
   name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = var.resource_group
+  resource_group_name                = local.config.resource_group_name
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  storage_account_name               = var.storage_account != null ? var.storage_account.name : azurerm_storage_account.this.0.name
-  storage_account_access_key         = var.storage_account != null ? var.storage_account.access_key : azurerm_storage_account.this.0.primary_access_key
+  storage_account_name               = local.config.storage_account_name
+  storage_account_access_key         = local.config.storage_account_access_key
   functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
@@ -929,29 +993,47 @@ resource "azurerm_linux_function_app" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                              = local.config.site_config.always_on
-    ftps_state                             = local.config.site_config.ftps_state
-    health_check_path                      = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
-    minimum_tls_version                    = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    application_insights_connection_string        = try(azurerm_application_insights.this.0.connection_string, null)
+    application_insights_key                      = try(azurerm_application_insights.this.0.instrumentation_key, null)
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker.0.image_name, i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
-        java_version = application_stack.value.java_version
+        dynamic "docker" {
+          for_each = application_stack.value.docker
+
+          content {
+            registry_url      = docker.value.registry_url
+            image_name        = docker.value.image_name
+            image_tag         = docker.value.image_tag
+            registry_username = try(docker.value.registry_username, null)
+            registry_password = try(docker.value.registry_password, null)
+          }
+        }
+
+        dotnet_version              = application_stack.value.dotnet_version
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        python_version              = application_stack.value.python_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 
@@ -1012,11 +1094,12 @@ resource "azurerm_linux_function_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_function_app.this) != 0 }
 
   name                               = each.key
-  function_app_id                    = azurerm_linux_function_app.this[0].id
-  storage_account_name               = azurerm_storage_account.this.0.name
-  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  function_app_id                    = azurerm_linux_function_app.this.0.id
+  service_plan_id                    = try(each.value.service_plan_id, local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id)
+  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  storage_account_name               = local.config.storage_account_name
+  storage_account_access_key         = local.config.storage_account_access_key
   functions_extension_version        = local.config.functions_extension_version
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
   builtin_logging_enabled            = local.config.builtin_logging_enabled
   client_certificate_enabled         = local.config.client_certificate_mode != null
@@ -1028,30 +1111,48 @@ resource "azurerm_linux_function_app_slot" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
   site_config {
-    always_on                              = local.config.site_config.always_on
-    ftps_state                             = local.config.site_config.ftps_state
-    health_check_path                      = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
-    minimum_tls_version                    = local.config.site_config.minimum_tls_version
-    scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
-    scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
-    use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
-    vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
-    auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
+    always_on                                     = local.config.site_config.always_on
+    ftps_state                                    = local.config.site_config.ftps_state
+    health_check_path                             = local.config.site_config.health_check_path
+    health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
+    container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
+    container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
+    minimum_tls_version                           = local.config.site_config.minimum_tls_version
+    scm_minimum_tls_version                       = local.config.site_config.scm_minimum_tls_version
+    scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
+    use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
+    vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    application_insights_connection_string        = try(azurerm_application_insights.this.0.connection_string, null)
+    application_insights_key                      = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker.0.image_name, i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
-        java_version = application_stack.value.java_version
+        dynamic "docker" {
+          for_each = application_stack.value.docker
+
+          content {
+            registry_url      = docker.value.registry_url
+            image_name        = docker.value.image_name
+            image_tag         = docker.value.image_tag
+            registry_username = try(docker.value.registry_username, null)
+            registry_password = try(docker.value.registry_password, null)
+          }
+        }
+
+        dotnet_version              = application_stack.value.dotnet_version
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        python_version              = application_stack.value.python_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 
@@ -1104,11 +1205,11 @@ resource "azurerm_windows_function_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "FunctionApp" ? 1 : 0
 
   name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = var.resource_group
+  resource_group_name                = local.config.resource_group_name
   location                           = local.config.location
   service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  storage_account_name               = var.storage_account != null ? var.storage_account.name : azurerm_storage_account.this.0.name
-  storage_account_access_key         = var.storage_account != null ? var.storage_account.access_key : azurerm_storage_account.this.0.primary_access_key
+  storage_account_name               = local.config.storage_account_name
+  storage_account_access_key         = local.config.storage_account_access_key
   functions_extension_version        = local.config.functions_extension_version
   virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   builtin_logging_enabled            = local.config.builtin_logging_enabled
@@ -1122,8 +1223,8 @@ resource "azurerm_windows_function_app" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
@@ -1131,7 +1232,7 @@ resource "azurerm_windows_function_app" "this" {
     always_on                              = local.config.site_config.always_on
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    health_check_eviction_time_in_min      = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
     minimum_tls_version                    = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
@@ -1141,10 +1242,14 @@ resource "azurerm_windows_function_app" "this" {
     application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
 
       content {
-        java_version = application_stack.value.java_version
+        dotnet_version              = application_stack.value.dotnet_version
+        use_dotnet_isolated_runtime = application_stack.value.use_dotnet_isolated_runtime
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 
@@ -1199,17 +1304,26 @@ resource "azurerm_windows_function_app" "this" {
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],    ]
+  }
 }
 
 resource "azurerm_windows_function_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_function_app.this) != 0 }
 
   name                               = each.key
-  function_app_id                    = azurerm_windows_function_app.this[0].id
-  storage_account_name               = azurerm_storage_account.this.0.name
-  storage_account_access_key         = azurerm_storage_account.this.0.primary_access_key
+  function_app_id                    = azurerm_windows_function_app.this.0.id
+  service_plan_id                    = try(each.value.service_plan_id, local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id)
+  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  storage_account_name               = local.config.storage_account_name
+  storage_account_access_key         = local.config.storage_account_access_key
   functions_extension_version        = local.config.functions_extension_version
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
   https_only                         = local.config.https_only
   builtin_logging_enabled            = local.config.builtin_logging_enabled
   client_certificate_enabled         = local.config.client_certificate_mode != null
@@ -1221,8 +1335,8 @@ resource "azurerm_windows_function_app_slot" "this" {
     for_each = local.config.identity.type[*]
 
     content {
-      type         = length(concat(local.config.identity.identity_ids, local.config.identity_ids)) == 0 ? "SystemAssigned" : local.config.identity.type
-      identity_ids = concat(local.config.identity.identity_ids, local.config.identity_ids)
+      type         = local.config.identity.type
+      identity_ids = local.config.identity.type == "SystemAssigned" ? null : concat(azurerm_user_assigned_identity.this[*].id, local.config.identity.identity_ids)
     }
   }
 
@@ -1230,7 +1344,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     always_on                              = local.config.site_config.always_on
     ftps_state                             = local.config.site_config.ftps_state
     health_check_path                      = local.config.site_config.health_check_path
-    health_check_eviction_time_in_min      = local.config.site_config.health_check_eviction_time_in_min
+    health_check_eviction_time_in_min      = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
     minimum_tls_version                    = local.config.site_config.minimum_tls_version
     scm_minimum_tls_version                = local.config.site_config.scm_minimum_tls_version
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
@@ -1241,10 +1355,14 @@ resource "azurerm_windows_function_app_slot" "this" {
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = local.config.site_config.application_stack[*]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
 
       content {
-        java_version = application_stack.value.java_version
+        dotnet_version              = application_stack.value.dotnet_version
+        use_dotnet_isolated_runtime = application_stack.value.use_dotnet_isolated_runtime
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 

@@ -26,15 +26,6 @@ variable "environment" {
   }
 }
 
-variable "resource_group" {
-  type = string
-  description = <<-EOT
-  (Required) Resource group where resources are to be created.
-
-  The name of a resource group already created outside this module.
-  EOT
-}
-
 variable "tags" {
   type        = map(string)
   description = <<-EOT
@@ -48,4 +39,15 @@ variable "tags" {
     condition = length(setintersection(keys(var.tags), ["application", "environment", "terraform"])) == 0
     error_message = "Validation failed: One or more tags conflict with default tags set by the module."
   }
+}
+
+variable "resource_group" {
+  type        = object({
+    name = string
+  })
+  description = <<-EOT
+  (Required) Resource group to create new resources in.
+
+  Resource Group resources created outside this module.
+  EOT
 }

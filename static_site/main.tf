@@ -2,8 +2,9 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
-    location = var.config.global.location
+    name                = var.config.global.name
+    location            = var.config.global.location
+    resource_group_name = var.resource_group.name
 
     tags = merge(
       {
@@ -63,7 +64,7 @@ resource "azurerm_static_site" "this" {
   for_each = local.config.sites
 
   name                = azurecaf_name.static_site[each.key].result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   sku_size            = each.value.sku_name
   sku_tier            = each.value.sku_name

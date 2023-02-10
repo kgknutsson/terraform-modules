@@ -2,8 +2,9 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
-    location = var.config.global.location
+    name                = var.config.global.name
+    location            = var.config.global.location
+    resource_group_name = var.resource_group.name
 
     tags = merge(
       {
@@ -18,7 +19,7 @@ locals {
       try(local.env_config.key_vault.tags, {})
     )
 
-    sku_name                        = try(local.env_config.key_vault.sku_name, var.config.global.key_vault.sku_name, "standard")
+    sku_name                        = try(local.env_config.key_vault.sku_name, var.config.global.key_vault.sku_name, null) // standard or premium
     enabled_for_template_deployment = try(local.env_config.key_vault.enabled_for_template_deployment, var.config.global.key_vault.enabled_for_template_deployment, true)
     purge_protection_enabled        = try(local.env_config.key_vault.purge_protection_enabled, var.config.global.key_vault.purge_protection_enabled, false)
 
@@ -26,7 +27,14 @@ locals {
       bypass                     = try(local.env_config.key_vault.network_acls.bypass, var.config.global.key_vault.network_acls.bypass, "AzureServices")
       default_action             = try(local.env_config.key_vault.network_acls.default_action, var.config.global.key_vault.network_acls.default_action, "Deny")
       ip_rules                   = concat(try(var.config.global.key_vault.network_acls.ip_rules, []), try(local.env_config.key_vault.network_acls.ip_rules, []))
-      virtual_network_subnet_ids = matchkeys(values(var.subnet_ids), keys(var.subnet_ids), concat(try(var.config.global.key_vault.network_acls.subnets, []), try(local.env_config.key_vault.network_acls.subnets, [])))
+      virtual_network_subnet_ids = matchkeys(
+        try(values(var.virtual_network.subnet_ids), []),
+        try(keys(var.virtual_network.subnet_ids), []),
+        concat(
+          try(var.config.global.key_vault.network_acls.subnets, []),
+          try(local.env_config.key_vault.network_acls.subnets, [])
+        )
+      )
     }
   }
 }
@@ -34,6 +42,8 @@ locals {
 data "azurerm_client_config" "this" {}
 
 resource "azurecaf_name" "key_vault" {
+  count = local.config.sku_name != null ? 1 : 0
+
   name          = local.config.name
   resource_type = "azurerm_key_vault"
   suffixes      = [var.environment]
@@ -41,8 +51,10 @@ resource "azurecaf_name" "key_vault" {
 }
 
 resource "azurerm_key_vault" "this" {
-  name                            = azurecaf_name.key_vault.result
-  resource_group_name             = var.resource_group
+  count = length(azurecaf_name.key_vault)
+
+  name                            = azurecaf_name.key_vault.0.result
+  resource_group_name             = local.config.resource_group_name
   location                        = local.config.location
   tags                            = local.config.tags
   tenant_id                       = data.azurerm_client_config.this.tenant_id

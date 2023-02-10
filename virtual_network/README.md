@@ -1,6 +1,20 @@
-# Terraform module for Azure Virtual Network configuration
+# Terraform module for deploying Azure Virtual Network resources
 
-This module configures an Azure Virtual Network with Terraform.
+Use this module to deploy Azure Virtual Network resources with Terraform.
+
+## Usage
+
+Add the module to a terraform root module by adding these lines of code.
+
+```
+module "virtual_network" {
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/virtual_network"
+
+  config         = local.config
+  environment    = var.environment
+  resource_group = module.resource_group
+}
+```
 
 ## Resources
 

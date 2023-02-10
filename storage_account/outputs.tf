@@ -1,14 +1,14 @@
-output "storage_account_id" {
-  value       = azurerm_storage_account.this.id
-  description = "Storage Account id."
+output "id" {
+  value       = try(azurerm_storage_account.this.0.id, null)
+  description = "Storage account id."
 }
 
-output "storage_account_name" {
-  value       = azurerm_storage_account.this.name
-  description = "Storage Account name."
+output "name" {
+  value       = try(azurerm_storage_account.this.0.name, null)
+  description = "Storage account name."
 }
 
-output "storage_account_access_key" {
-  value       = azurerm_storage_account.this.primary_access_key
-  description = "Storage Account access key."
+output "primary_access_key" {
+  value       = try(azurerm_storage_account.this.0.primary_access_key, null)
+  description = "Storage Account primary access key."
 }

@@ -2,8 +2,9 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
-    location = var.config.global.location
+    name                = var.config.global.name
+    location            = var.config.global.location
+    resource_group_name = var.resource_group.name
 
     tags = merge(
       {
@@ -48,7 +49,7 @@ resource "azurerm_virtual_network" "this" {
   count = length(local.config.address_space)
 
   name                = azurecaf_name.virtual_network.0.result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
   address_space       = local.config.address_space

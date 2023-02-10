@@ -1,6 +1,19 @@
-# Terraform module for Azure Resource Group configuration
+# Terraform module for deploying Azure Resource Group resources
 
-This module configures a Azure Resource Group with Terraform.
+Use this module to deploy Azure Resource Group resources with Terraform.
+
+## Usage
+
+Add the module to a terraform root module by adding these lines of code.
+
+```
+module "resource_group" {
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/resource_group"
+
+  config         = local.config
+  environment    = var.environment
+}
+```
 
 ## Resources
 

@@ -1,6 +1,24 @@
-# Terraform module for Azure Application Gateway configuration
+# Terraform module for deploying Azure Application Gateway resources
 
-This module configures an Azure Application Gateway with Terraform.
+Use this module to deploy Azure Application Gateway resources with Terraform.
+
+## Usage
+
+Add the module to a terraform root module by adding these lines of code.
+
+```
+module "application_gateway" {
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/application_gateway"
+
+  config         = local.config
+  environment    = var.environment
+  resource_group = module.resource_group
+
+  // Optional
+  virtual_network = module.virtual_network
+  key_vault       = module.key_vault
+}
+```
 
 ## Resources
 

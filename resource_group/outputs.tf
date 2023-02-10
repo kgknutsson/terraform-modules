@@ -1,4 +1,9 @@
-output "resource_group_name" {
+output "id" {
+  value       = azurerm_resource_group.this.id
+  description = "Resource group id."
+}
+
+output "name" {
   value       = azurerm_resource_group.this.name
-  description = "The resource group name."
+  description = "Resource group name."
 }

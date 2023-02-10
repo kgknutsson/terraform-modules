@@ -10,7 +10,7 @@ resource "azurerm_relay_namespace" "this" {
   count = length(azurecaf_name.relay_namespace)
 
   name                = azurecaf_name.relay_namespace.0.result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
   sku_name            = "Standard"

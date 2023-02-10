@@ -1,6 +1,6 @@
 # Terraform module for deploying Azure Static Web App resources
 
-Use this module to deploy Azure Static Web App instances with Terraform.
+Use this module to deploy Azure Static Web App resources with Terraform.
 
 ## Usage
 
@@ -8,11 +8,11 @@ Add the module to a terraform root module by adding these lines of code.
 
 ```
 module "static_site" {
-  source = "github.com/kgknutsson/terraform-modules?ref=v2/static_site"
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/static_site"
 
   config         = local.config
   environment    = var.environment
-  resource_group = module.resource_group.resource_group_name
+  resource_group = module.resource_group
 }
 ```
 

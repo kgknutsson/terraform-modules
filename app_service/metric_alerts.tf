@@ -46,7 +46,7 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
   count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
 
   name                     = "CPU usage above threshold - ${azurerm_service_plan.this.0.name}"
-  resource_group_name      = var.resource_group
+  resource_group_name      = local.config.resource_group_name
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_service_plan.this.0.id]
@@ -75,7 +75,7 @@ resource "azurerm_monitor_metric_alert" "mem90" {
   count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
 
   name                     = "Memory usage above threshold - ${azurerm_service_plan.this.0.name}"
-  resource_group_name      = var.resource_group
+  resource_group_name      = local.config.resource_group_name
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_service_plan.this.0.id]
@@ -104,7 +104,7 @@ resource "azurerm_monitor_metric_alert" "heap80" {
   count = min(length(local.config.insights.workspace_id[*]), local.config.metric_alerts.enabled && local.config.type == "WebApp" ? 1 : 0)
 
   name                     = "Java heap usage above threshold - ${azurerm_application_insights.this.0.name}"
-  resource_group_name      = var.resource_group
+  resource_group_name      = local.config.resource_group_name
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_application_insights.this.0.id]

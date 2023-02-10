@@ -2,8 +2,9 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name     = var.config.global.name
-    location = var.config.global.location
+    name                = var.config.global.name
+    location            = var.config.global.location
+    resource_group_name = var.resource_group.name
 
     tags = merge(
       {
@@ -24,9 +25,9 @@ locals {
     gateway_ip_configuration = {
       name      = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
       subnet_id = try(
-        var.subnet_ids[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
+        var.virtual_network.subnet_ids[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
         local.env_config.application_gateway.gateway_ip_configuration.subnet_id,
-        var.subnet_ids[var.config.global.application_gateway.gateway_ip_configuration.subnet_id],
+        var.virtual_network.subnet_ids[var.config.global.application_gateway.gateway_ip_configuration.subnet_id],
         var.config.global.application_gateway.gateway_ip_configuration.subnet_id
       )
     }
@@ -265,7 +266,7 @@ data "azurerm_key_vault_certificate" "this" {
   for_each = toset([ for v in concat(local.config.ssl_certificates, local.config.trusted_root_certificates) : v.name if v.key_vault_secret_id == null && v.data == null ])
 
   name         = each.value
-  key_vault_id = var.key_vault_id
+  key_vault_id = var.key_vault.id
 }
 
 resource "azurecaf_name" "user_assigned_identity" {
@@ -276,13 +277,13 @@ resource "azurecaf_name" "user_assigned_identity" {
 
 resource "azurerm_user_assigned_identity" "this" {
   name                = azurecaf_name.user_assigned_identity.result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
 }
 
 resource "azurerm_key_vault_access_policy" "this" {
-  key_vault_id = var.key_vault_id
+  key_vault_id = var.key_vault.id
   tenant_id    = azurerm_user_assigned_identity.this.tenant_id
   object_id    = azurerm_user_assigned_identity.this.principal_id
 
@@ -299,7 +300,7 @@ resource "azurecaf_name" "public_ip" {
 
 resource "azurerm_public_ip" "this" {
   name                = azurecaf_name.public_ip.result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
   sku                 = local.config.public_ip.sku
@@ -317,7 +318,7 @@ resource "azurecaf_name" "application_gateway" {
 
 resource "azurerm_application_gateway" "this" {
   name                = azurecaf_name.application_gateway.result
-  resource_group_name = var.resource_group
+  resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
 

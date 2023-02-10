@@ -1,6 +1,25 @@
-# Terraform module for Azure App Service configuration
+# Terraform module for deploying Azure App Service resources
 
-This module configures an Azure App Service instance with Terraform.
+Use this module to deploy Azure App Service resources with Terraform.
+
+## Usage
+
+Add the module to a terraform root module by adding these lines of code.
+
+```
+module "app_service" {
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/app_service"
+
+  config         = local.config
+  environment    = var.environment
+  resource_group = module.resource_group
+
+  // Optional
+  app_service     = module.app_service_shared
+  virtual_network = module.virtual_network
+  storage_account = module.storage_account
+}
+```
 
 ## Resources
 

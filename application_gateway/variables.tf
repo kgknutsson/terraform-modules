@@ -26,16 +26,6 @@ variable "environment" {
   }
 }
 
-variable "resource_group" {
-  type = string
-  description = <<-EOT
-  (Required) Resource group where resources are to be created.
-
-  Resource group name already created outside this module.
-  EOT
-}
-
-
 variable "tags" {
   type        = map(string)
   description = <<-EOT
@@ -51,22 +41,37 @@ variable "tags" {
   }
 }
 
-variable "subnet_ids" {
-  type        = map(string)
+variable "resource_group" {
+  type        = object({
+    name = string
+  })
   description = <<-EOT
-  (Optional) Subnet ids for the virtual network to integrate with.
+  (Required) Resource group to create new resources in.
 
-  Subnet selection will be based on configuration set in application_gateway.subnet.
+  Resource Group resources created outside this module.
   EOT
-  default     = {}
 }
 
-variable "key_vault_id" {
-  type        = string
+variable "virtual_network" {
+  type        = object({
+    subnet_ids = map(string)
+  })
   description = <<-EOT
-  (Optional) Key vault that stores certificates used by the application gateway.
+  (Optional) Virtual Network to associate with Application Gateway.
 
-  Application gateway will fetch its certificates from this key vault.
+  Virtual Network resources created outside this module.
+  EOT
+  default     = null
+}
+
+variable "key_vault" {
+  type        = object({
+    id = string
+  })
+  description = <<-EOT
+  (Optional) Key Vault for certificate retrieval.
+
+  Key Vault resources created outside this module.
   EOT
   default     = null
 }

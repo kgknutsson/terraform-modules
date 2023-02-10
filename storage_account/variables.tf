@@ -26,16 +26,6 @@ variable "environment" {
   }
 }
 
-variable "resource_group" {
-  type = string
-  description = <<-EOT
-  (Required) Resource group where resources are to be created.
-
-  Resource group name already created outside this module.
-  EOT
-}
-
-
 variable "tags" {
   type        = map(string)
   description = <<-EOT
@@ -51,13 +41,25 @@ variable "tags" {
   }
 }
 
-variable "subnet_ids" {
-  type        = map(string)
+variable "resource_group" {
+  type        = object({
+    name = string
+  })
   description = <<-EOT
-  (Optional) Subnet ids for the virtual network to integrate with.
+  (Required) Resource group to create new resources in.
 
-  Subnet seclection will be based on configuration set in app_service.site_config.vnet_integration_subnet.
+  Resource Group resources created outside this module.
   EOT
-  default     = {}
 }
 
+variable "virtual_network" {
+  type        = object({
+    subnet_ids = map(string)
+  })
+  description = <<-EOT
+  (Optional) Virtual Network used by network rules.
+
+  Virtual Network resources created outside this module.
+  EOT
+  default     = null
+}

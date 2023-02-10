@@ -26,16 +26,6 @@ variable "environment" {
   }
 }
 
-variable "resource_group" {
-  type = string
-  description = <<-EOT
-  (Required) Resource group where resources are to be created.
-
-  Resource group name already created outside this module.
-  EOT
-}
-
-
 variable "tags" {
   type        = map(string)
   description = <<-EOT
@@ -51,45 +41,52 @@ variable "tags" {
   }
 }
 
-variable "service_plan_id" {
-  type        = string
+variable "resource_group" {
+  type        = object({
+    name = string
+  })
   description = <<-EOT
-  (Optional) Service Plan which will be used to host this app.
+  (Required) Resource group to create new resources in.
 
-  Service Plan created outside this module.
+  Resource Group resources created outside this module.
+  EOT
+}
+
+variable "app_service" {
+  type        = object({
+    service_plan_id                        = optional(string)
+    service_plan_os_type                   = optional(string)
+    application_insights_connection_string = optional(string)
+  })
+  description = <<-EOT
+  (Optional) Shared app service resources.
+
+  App Service resources created outside this module.
   EOT
   default     = null
 }
 
-variable "application_insights_connection_string" {
-  type        = string
+variable "virtual_network" {
+  type        = object({
+    subnet_ids = map(string)
+  })
   description = <<-EOT
-  (Optional) Application Insights connection string.
+  (Optional) Virtual Network to associate with App Service.
 
-  Application Insights resource created outside this module.
+  Virtual Network resources created outside this module.
   EOT
   default     = null
-}
-
-variable "subnet_ids" {
-  type        = map(string)
-  description = <<-EOT
-  (Optional) Subnet ids for the virtual network to integrate with.
-
-  Subnet seclection will be based on configuration set in app_service.site_config.vnet_integration_subnet.
-  EOT
-  default     = {}
 }
 
 variable "storage_account" {
   type        = object({
-    name       = string
-    access_key = string
+    name               = string
+    primary_access_key = string
   })
   description = <<-EOT
-  (Optional) The backend storage account which will be used by this Function App.
+  (Optional) Backend Storage Account needed by Function App.
 
-  Storage Account created outside this module.
+  Storage Account resources created outside this module.
   EOT
   default     = null
 }

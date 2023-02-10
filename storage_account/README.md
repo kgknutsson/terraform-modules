@@ -1,6 +1,23 @@
-# Terraform module for Azure Storage Account configuration
+# Terraform module for deploying Azure Storage Account resources
 
-This module configures an Azure Storage Account with Terraform.
+Use this module to deploy Azure Storage Account resources with Terraform.
+
+## Usage
+
+Add the module to a terraform root module by adding these lines of code.
+
+```
+module "storage_account" {
+  source = "github.com/kgknutsson/terraform-modules?ref=v3/storage_account"
+
+  config          = local.config
+  environment     = var.environment
+  resource_group  = module.resource_group
+
+  // Optional
+  virtual_network = module.virtual_network
+}
+```
 
 ## Resources
 
