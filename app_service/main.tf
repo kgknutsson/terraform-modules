@@ -359,7 +359,7 @@ resource "azurerm_linux_web_app" "this" {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+              path       = try(slow_request.value.path, null)
             }
           }
 
@@ -524,7 +524,7 @@ resource "azurerm_linux_web_app_slot" "this" {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+              path       = try(slow_request.value.path, null)
             }
           }
 
@@ -692,7 +692,7 @@ resource "azurerm_windows_web_app" "this" {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+              path       = try(slow_request.value.path, null)
             }
           }
 
@@ -866,7 +866,7 @@ resource "azurerm_windows_web_app_slot" "this" {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, local.config.site_config.health_check_path, null)
+              path       = try(slow_request.value.path, null)
             }
           }
 
