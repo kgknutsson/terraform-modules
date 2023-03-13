@@ -6,6 +6,7 @@ data "azurerm_monitor_diagnostic_categories" "this" {
   )
 
   resource_id = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
+  resource_name = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).name
 }
 
 resource "azurerm_monitor_diagnostic_setting" "this" {
@@ -60,6 +61,35 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
     aggregation      = "Average"
     operator         = "GreaterThan"
     threshold        = "90"
+  }
+
+  dynamic "action" {
+    for_each = local.config.metric_alerts.action_group_ids
+
+    content {
+      action_group_id = action.value
+    }
+  }
+}
+
+resource "azurerm_monitor_metric_alert" "healthcheck" {
+  count = local.config.metric_alerts.enabled && length(data.azurerm_monitor_diagnostic_categories.this.resource_id) > 0 ? 1 : 0
+
+  name                     = "App is unhealthy - ${data.azurerm_monitor_diagnostic_categories.this.0.resource_name}"
+  resource_group_name      = local.config.resource_group_name
+  target_resource_location = local.config.location
+  tags                     = local.config.tags
+  scopes                   = [data.azurerm_monitor_diagnostic_categories.this.0.resource_id]
+  description              = "Whenever the average health check status is less than 99.9"
+  severity                 = 1
+  target_resource_type     = "Microsoft.Web/sites"
+
+  criteria {
+    metric_namespace = "Microsoft.Web/sites"
+    metric_name      = "HealthCheckStatus"
+    aggregation      = "Average"
+    operator         = "LessThanOrEqual"
+    threshold        = "99.9"
   }
 
   dynamic "action" {
