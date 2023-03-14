@@ -50,7 +50,7 @@ resource "azurerm_monitor_metric_alert" "healthcheck" {
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id]
-  description              = "Whenever the average health check status is not 100%"
+  description              = "Whenever the average health check status is less than 100%"
   severity                 = 1
   target_resource_type     = "Microsoft.Web/sites"
 
@@ -58,7 +58,7 @@ resource "azurerm_monitor_metric_alert" "healthcheck" {
     metric_namespace = "Microsoft.Web/sites"
     metric_name      = "HealthCheckStatus"
     aggregation      = "Average"
-    operator         = "NotEquals"
+    operator         = "LessThan"
     threshold        = "100"
   }
 
