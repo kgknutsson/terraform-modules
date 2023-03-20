@@ -46,7 +46,13 @@ locals {
           []
         )
 
-        tags = { "application" : i }
+        tags = merge(
+          {
+            "application" : i
+          },
+          try(var.config.global.static_site.sites[i].tags, {}),
+          try(local.env_config.static_site.sites[i].tags, {})
+        )
       }
     }
   }
