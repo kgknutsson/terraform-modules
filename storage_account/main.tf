@@ -67,6 +67,7 @@ resource "azurerm_storage_account" "this" {
   min_tls_version               = local.config.min_tls_version
   shared_access_key_enabled     = local.config.shared_access_key_enabled
   public_network_access_enabled = local.config.public_network_access_enabled
+  is_hns_enabled                = local.config.is_hns_enabled
   tags                          = local.config.tags
 
   dynamic "network_rules" {
