@@ -79,6 +79,7 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_service_plan.this.0.id]
+  window_size              = "PT15M"
   description              = "Whenever the average cpu percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"
@@ -108,6 +109,7 @@ resource "azurerm_monitor_metric_alert" "mem90" {
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_service_plan.this.0.id]
+  window_size              = "PT15M"
   description              = "Whenever the avg memory percentage is greater than 90%"
   severity                 = 2
   target_resource_type     = "Microsoft.Web/serverfarms"
@@ -137,6 +139,7 @@ resource "azurerm_monitor_metric_alert" "heap80" {
   target_resource_location = local.config.location
   tags                     = local.config.tags
   scopes                   = [azurerm_application_insights.this.0.id]
+  window_size              = "PT15M"
   description              = "Whenever the avg % of max heap memory used is greater than 80"
   severity                 = 2
   target_resource_type     = "Microsoft.Insights/Components"
