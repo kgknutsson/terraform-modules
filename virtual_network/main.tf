@@ -21,19 +21,15 @@ locals {
 
     address_space = try([local.env_config.virtual_network.address_space], [var.config.global.virtual_network.address_space], [])
 
-    subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => merge(
-      {
-        subnet_size                    = 28
-        service_endpoints              = null
-        service_delegation             = null
-        private_connection_resource_id = null
-        subresource_names              = null
-        is_manual_connection           = false
-        security_group_rules           = []
-      },
-      try(var.config.global.virtual_network.subnets[k], {}),
-      try(local.env_config.virtual_network.subnets[k], {})
-    ) if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
+    subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => {
+      subnet_size                    = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
+      service_endpoints              = concat(try(local.env_config.virtual_network.subnets[k].service_endpoints, []), try(var.config.global.virtual_network.subnets[k].service_endpoints, []))
+      service_delegation             = try(local.env_config.virtual_network.subnets[k].service_delegation, var.config.global.virtual_network.subnets[k].service_delegation, null)
+      private_connection_resource_id = try(local.env_config.virtual_network.subnets[k].private_connection_resource_id, var.config.global.virtual_network.subnets[k].private_connection_resource_id, null)
+      subresource_names              = try(local.env_config.virtual_network.subnets[k].subresource_names, var.config.global.virtual_network.subnets[k].subresource_names, null)
+      is_manual_connection           = try(local.env_config.virtual_network.subnets[k].is_manual_connection, var.config.global.virtual_network.subnets[k].is_manual_connection, false)
+      security_group_rules           = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
+    } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
   }
 }
 
