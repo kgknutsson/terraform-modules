@@ -457,6 +457,8 @@ resource "azurerm_linux_web_app" "this" {
     ignore_changes = [
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
     ]
   }
 }
@@ -614,6 +616,8 @@ resource "azurerm_linux_web_app_slot" "this" {
     ignore_changes = [
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
     ]
   }
 }
@@ -785,6 +789,8 @@ resource "azurerm_windows_web_app" "this" {
     ignore_changes = [
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to cors until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/19323
       site_config.0.cors,
@@ -951,6 +957,8 @@ resource "azurerm_windows_web_app_slot" "this" {
     ignore_changes = [
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
     ]
   }
 }
