@@ -1,3 +1,13 @@
+moved {
+  from = azurerm_private_dns_zone.this.0
+  to   = azurerm_private_dns_zone.this["privatelink.database.windows.net"]
+}
+
+moved {
+  from = azurerm_private_dns_zone_virtual_network_link.this.0
+  to   = azurerm_private_dns_zone_virtual_network_link.this["privatelink.database.windows.net"]
+}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
@@ -30,6 +40,15 @@ locals {
       is_manual_connection           = try(local.env_config.virtual_network.subnets[k].is_manual_connection, var.config.global.virtual_network.subnets[k].is_manual_connection, false)
       security_group_rules           = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
     } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
+  }
+
+  subresource_dns_zone_map = {
+    sqlServer = "privatelink.database.windows.net"
+    vault     = "privatelink.vaultcore.azure.net"
+  }
+
+  subnet_dns_zone_map = {
+    for k, v in local.config.subnets : k => local.subresource_dns_zone_map[v.subresource_names.0] if local.config.subnets[k].private_connection_resource_id != null
   }
 }
 
@@ -94,27 +113,27 @@ resource "azurerm_subnet" "this" {
 }
 
 resource "azurerm_private_dns_zone" "this" {
-  count = alltrue(values(azurerm_subnet.this)[*].private_endpoint_network_policies_enabled) ? 0 : 1
+  for_each = toset([ for k, v in local.subresource_dns_zone_map : v if contains(flatten(values(local.config.subnets)[*].subresource_names), k) ])
 
-  name                = "privatelink.database.windows.net"
+  name                = each.key
   resource_group_name = azurerm_virtual_network.this.0.resource_group_name
   tags                = local.config.tags
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "this" {
-  count = length(azurerm_private_dns_zone.this)
+  for_each = azurerm_private_dns_zone.this
 
   name                  = azurerm_virtual_network.this.0.name
   resource_group_name   = azurerm_virtual_network.this.0.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.this.0.name
+  private_dns_zone_name = each.key
   virtual_network_id    = azurerm_virtual_network.this.0.id
   tags                  = local.config.tags
 }
 
 resource "azurecaf_name" "private_endpoint" {
-  for_each = { for k, v in azurerm_subnet.this : k => v if !v.private_endpoint_network_policies_enabled }
+  for_each = { for k, v in local.config.subnets : k => v if v.private_connection_resource_id != null }
 
-  name          = reverse(split("/", local.config.subnets[each.key].private_connection_resource_id))[0]
+  name          = reverse(split("/", each.value.private_connection_resource_id))[0]
   resource_type = "azurerm_private_endpoint"
   suffixes      = [local.config.name]
 }
@@ -129,8 +148,8 @@ resource "azurerm_private_endpoint" "this" {
   tags                = local.config.tags
 
   private_dns_zone_group {
-    name                 = replace(azurerm_private_dns_zone.this.0.name, ".", "-")
-    private_dns_zone_ids = azurerm_private_dns_zone.this[*].id
+    name                 = replace(azurerm_private_dns_zone.this[local.subnet_dns_zone_map[each.key]].name, ".", "-")
+    private_dns_zone_ids = [azurerm_private_dns_zone.this[local.subnet_dns_zone_map[each.key]].id]
   }
 
   private_service_connection {
