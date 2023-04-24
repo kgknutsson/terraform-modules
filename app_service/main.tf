@@ -205,7 +205,8 @@ locals {
   appinsights_connection_string = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
   appinsights_app_settings      = local.appinsights_connection_string == null ? {} : merge(
     {
-      "APPLICATIONINSIGHTS_CONNECTION_STRING" = local.appinsights_connection_string
+      "APPLICATIONINSIGHTS_CONNECTION_STRING"      = local.appinsights_connection_string
+      "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2"}[local.config.os_type]
     },
     local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
   )
