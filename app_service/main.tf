@@ -462,6 +462,11 @@ resource "azurerm_linux_web_app" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
     ]
   }
 }
@@ -622,6 +627,11 @@ resource "azurerm_linux_web_app_slot" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
     ]
   }
 }
@@ -796,9 +806,11 @@ resource "azurerm_windows_web_app" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
-      # Temporary fix to avoid recurring changes to cors until fixed in the azurerm provider.
-      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/19323
-      site_config.0.cors,
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
     ]
   }
 }
@@ -965,6 +977,11 @@ resource "azurerm_windows_web_app_slot" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
     ]
   }
 }
@@ -1025,8 +1042,7 @@ resource "azurerm_linux_function_app" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string        = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key                      = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    application_insights_connection_string        = local.appinsights_connection_string
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker.0.image_name, i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
@@ -1103,6 +1119,17 @@ resource "azurerm_linux_function_app" "this" {
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
+
+  lifecycle {
+    ignore_changes = [
+      site_config.0.application_insights_key,
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
+    ]
+  }
 }
 
 resource "azurerm_linux_function_app_slot" "this" {
@@ -1143,8 +1170,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string        = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key                      = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    application_insights_connection_string        = local.appinsights_connection_string
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
@@ -1214,6 +1240,17 @@ resource "azurerm_linux_function_app_slot" "this" {
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
+
+  lifecycle {
+    ignore_changes = [
+      site_config.0.application_insights_key,
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
+    ]
+  }
 }
 
 resource "azurerm_windows_function_app" "this" {
@@ -1254,8 +1291,7 @@ resource "azurerm_windows_function_app" "this" {
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    application_insights_connection_string = local.appinsights_connection_string
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
@@ -1323,10 +1359,13 @@ resource "azurerm_windows_function_app" "this" {
 
   lifecycle {
     ignore_changes = [
+      site_config.0.application_insights_key,
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
       tags["hidden-link: /app-insights-instrumentation-key"],
-      tags["hidden-link: /app-insights-resource-id"],    ]
+      tags["hidden-link: /app-insights-resource-id"],
+    ]
   }
 }
 
@@ -1366,8 +1405,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
-    application_insights_connection_string = try(azurerm_application_insights.this.0.connection_string, null)
-    application_insights_key               = try(azurerm_application_insights.this.0.instrumentation_key, null)
+    application_insights_connection_string = local.appinsights_connection_string
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
@@ -1425,4 +1463,15 @@ resource "azurerm_windows_function_app_slot" "this" {
     local.config.app_settings,
     try(each.value.app_settings, {})
   )
+
+  lifecycle {
+    ignore_changes = [
+      site_config.0.application_insights_key,
+      # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
+      # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
+      tags["hidden-link: /app-insights-conn-string"],
+      tags["hidden-link: /app-insights-instrumentation-key"],
+      tags["hidden-link: /app-insights-resource-id"],
+    ]
+  }
 }
