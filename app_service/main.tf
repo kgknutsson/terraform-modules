@@ -204,19 +204,33 @@ locals {
   }
 
   appinsights_connection_string = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
-  appinsights_app_settings      = local.appinsights_connection_string == null ? {} : merge(
+
+  appinsights_app_settings = local.config.type == "WebApp" && local.appinsights_connection_string != null ? merge(
     {
       "APPLICATIONINSIGHTS_CONNECTION_STRING"      = local.appinsights_connection_string
       "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2"}[local.config.os_type]
     },
-    local.config.type == "WebApp" ? yamldecode(file("${path.module}/appinsights_defaults.yml")) : {}
-  )
+    yamldecode(file("${path.module}/appinsights_defaults.yml"))
+  ) : {}
 
-  java_app_settings = local.config.site_config.application_stack.java_version == null ? {} : {
-    "SERVER_SERVLET_CONTEXT_PATH" = local.config.type == "WebApp" ? "/" : null
-    "SPRING_PROFILES_ACTIVE"      = var.environment
-    "SPRING_DATASOURCE_URL"       = local.database_jdbc_string
-  }
+  app_settings = merge(
+    local.appinsights_app_settings,
+    local.config.type == "FunctionApp" && local.appinsights_connection_string != null ? {
+      "APPLICATIONINSIGHTS_ENABLE_AGENT" = true
+    } : {},
+    local.config.site_config.application_stack.java_version != null ? {
+      "SERVER_SERVLET_CONTEXT_PATH" = local.config.type == "WebApp" ? "/" : null
+      "SPRING_PROFILES_ACTIVE"      = var.environment
+      "SPRING_DATASOURCE_URL"       = local.database_jdbc_string
+    } : {},
+    local.config.os_type == "Linux" && local.config.type == "WebApp" ? {
+      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    } : {},
+    local.config.zip_deploy_file != null ? {
+      "WEBSITE_RUN_FROM_PACKAGE" = 1
+    } : {},
+    local.config.app_settings
+  )
 
   database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name), null)
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
@@ -438,14 +452,7 @@ resource "azurerm_linux_web_app" "this" {
     }
   }
 
-  app_settings = merge(
-    local.appinsights_app_settings,
-    local.java_app_settings,
-    {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    },
-    local.config.app_settings
-  )
+  app_settings = local.app_settings
 
   dynamic "sticky_settings" {
     for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
@@ -612,12 +619,7 @@ resource "azurerm_linux_web_app_slot" "this" {
   }
 
   app_settings = merge(
-    local.appinsights_app_settings,
-    local.java_app_settings,
-    {
-      "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
-    },
-    local.config.app_settings,
+    local.app_settings,
     try(each.value.app_settings, {})
   )
 
@@ -785,11 +787,7 @@ resource "azurerm_windows_web_app" "this" {
     }
   }
 
-  app_settings = merge(
-    local.appinsights_app_settings,
-    local.java_app_settings,
-    local.config.app_settings
-  )
+  app_settings = local.app_settings
 
   dynamic "sticky_settings" {
     for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
@@ -965,9 +963,7 @@ resource "azurerm_windows_web_app_slot" "this" {
   }
 
   app_settings = merge(
-    local.appinsights_app_settings,
-    local.java_app_settings,
-    local.config.app_settings,
+    local.app_settings,
     try(each.value.app_settings, {})
   )
 
@@ -1106,10 +1102,7 @@ resource "azurerm_linux_function_app" "this" {
     }
   }
 
-  app_settings = merge(
-    local.java_app_settings,
-    local.config.app_settings
-  )
+  app_settings = local.app_settings
 
   dynamic "sticky_settings" {
     for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
@@ -1236,8 +1229,7 @@ resource "azurerm_linux_function_app_slot" "this" {
   }
 
   app_settings = merge(
-    local.java_app_settings,
-    local.config.app_settings,
+    local.app_settings,
     try(each.value.app_settings, {})
   )
 
@@ -1343,10 +1335,7 @@ resource "azurerm_windows_function_app" "this" {
     }
   }
 
-  app_settings = merge(
-    local.java_app_settings,
-    local.config.app_settings
-  )
+  app_settings = local.app_settings
 
   dynamic "sticky_settings" {
     for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
@@ -1459,8 +1448,7 @@ resource "azurerm_windows_function_app_slot" "this" {
   }
 
   app_settings = merge(
-    local.java_app_settings,
-    local.config.app_settings,
+    local.app_settings,
     try(each.value.app_settings, {})
   )
 
