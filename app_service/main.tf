@@ -46,6 +46,7 @@ locals {
     builtin_logging_enabled            = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
     client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
     client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
+    zip_deploy_file                    = try(local.env_config.app_service.zip_deploy_file, var.config.global.app_service.zip_deploy_file, null)
     zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
     acr_id                             = try(local.env_config.app_service.acr_id, var.config.global.app_service.acr_id, null)
 
@@ -309,6 +310,7 @@ resource "azurerm_linux_web_app" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
@@ -475,6 +477,7 @@ resource "azurerm_linux_web_app_slot" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
@@ -635,6 +638,7 @@ resource "azurerm_windows_web_app" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
@@ -810,6 +814,7 @@ resource "azurerm_windows_web_app_slot" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
@@ -996,6 +1001,7 @@ resource "azurerm_linux_function_app" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
@@ -1226,6 +1232,7 @@ resource "azurerm_windows_function_app" "this" {
   client_certificate_enabled         = local.config.client_certificate_mode != null
   client_certificate_mode            = local.config.client_certificate_mode
   client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
+  zip_deploy_file                    = local.config.zip_deploy_file
   tags                               = local.config.tags
 
   dynamic "identity" {
