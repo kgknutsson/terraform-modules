@@ -19,6 +19,16 @@ locals {
       try(local.env_config.key_vault.tags, {})
     )
 
+    naming = merge(
+      {
+        azurerm_key_vault = {
+          random_length = null
+        }
+      },
+      try(var.config.global.key_vault.naming, {}),
+      try(local.env_config.key_vault.naming, {})
+    )
+
     sku_name                        = try(local.env_config.key_vault.sku_name, var.config.global.key_vault.sku_name, null) // standard or premium
     enable_rbac_authorization       = try(local.env_config.key_vault.enable_rbac_authorization, var.config.global.key_vault.enable_rbac_authorization, null)
     enabled_for_deployment          = try(local.env_config.key_vault.enabled_for_deployment, var.config.global.key_vault.enabled_for_deployment, null)
@@ -52,7 +62,7 @@ resource "azurecaf_name" "key_vault" {
   name          = local.config.name
   resource_type = "azurerm_key_vault"
   suffixes      = [var.environment]
-  random_length = 10
+  random_length = local.config.naming.azurerm_key_vault.random_length
 }
 
 resource "azurerm_key_vault" "this" {
