@@ -295,15 +295,6 @@ resource "azurerm_user_assigned_identity" "this" {
   tags                = local.config.tags
 }
 
-resource "azurerm_role_assignment" "this" {
-  count = min(length(local.config.acr_id[*]), length(azurerm_user_assigned_identity.this))
-
-  scope                            = local.config.acr_id
-  role_definition_name             = "ACRPull"
-  principal_id                     = azurerm_user_assigned_identity.this.0.principal_id
-  skip_service_principal_aad_check = true
-}
-
 resource "azurecaf_name" "app_service" {
   count = local.config.type != null ? 1 : 0
 
