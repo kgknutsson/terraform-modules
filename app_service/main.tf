@@ -476,6 +476,8 @@ resource "azurerm_linux_web_app" "this" {
       tags["hidden-link: /app-insights-resource-id"],
     ]
   }
+  
+  key_vault_reference_identity_id = azurerm_user_assigned_identity.this[0].id
 }
 
 resource "azurerm_linux_web_app_slot" "this" {
