@@ -4,12 +4,7 @@ variable "resource_group_name" {
     type = string
     description = "Name of resource group"
 }
-/*
-variable "dns_zone_name" {
-    type = string
-    description = "Name of the domain"
-}
-*/
+
 variable "subdomain_name" {
     type = string
     description = "Name of the subdomain"
@@ -29,12 +24,7 @@ variable "private_dns_zone_name_003" {
     type = string
     description = "Name of the private domain"
 }
-/*
-variable "cnames_public" {
-    type = map(string)
-    description = "all CNAME:s for public domain"
-}
-*/
+
 variable "cname_records_private_zone_002" {
     type = map(string)
     description = "CNAMEs for carsmart-staging.local"
@@ -45,18 +35,6 @@ variable "cname_records_private_zone_003" {
     description = "CNAME:s for carsmart-production.local"
 }
 
-/*
-variable "cnames_public_subdomain" {
-    type = map(string)
-    description = "all CNAME:s for public subdomain"
-}
-*/
-/*
-variable "a_records_public" {
-    type = map(string)
-    description = "all A records for public domain"
-}
-*/
 variable "a_records_public_subdomain" {
     type = map(string)
     description = "all A records for public subdomain"
@@ -77,20 +55,6 @@ variable "a_records_private_zone_003" {
     description = "A records for private domain carsmart-production.local"
 }
 
-/*
-variable "cnames_ingress_prod" {
-    type = map(string)
-    description = "CNAME:s for ingress.production"
-}
-*/
-
-/*
-resource "azurerm_dns_zone" "domain-public" {
-  name                = var.dns_zone_name
-  resource_group_name = var.resource_group_name
-}
-*/
-
 resource "azurerm_dns_zone" "subdomain-public" {
   name                = var.subdomain_name
   resource_group_name = var.resource_group_name
@@ -110,27 +74,6 @@ resource "azurerm_private_dns_zone" "domain-private_003" {
   name                = var.private_dns_zone_name_003
   resource_group_name = var.resource_group_name
 }
-
-//CNAMES and A records for public domain
-/*
-resource "azurerm_dns_cname_record" "cname_records_public" {
-  zone_name = var.dns_zone_name
-  resource_group_name = var.resource_group_name
-  ttl = 60
-  for_each = var.cnames_public
-  name = each.key
-  record = each.value
-}
-
-resource "azurerm_dns_a_record" "a_records_public" {
-  zone_name = var.dns_zone_name
-  resource_group_name = var.resource_group_name
-  ttl = 60
-  for_each = var.a_records_public
-  name = each.key
-  records = [ each.value ]
-}
-*/
 
 //A records for public sub domain
 resource "azurerm_dns_a_record" "a_records_public_subdomain" {
