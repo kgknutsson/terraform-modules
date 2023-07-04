@@ -43,6 +43,14 @@ locals {
       try(var.config.global.storage_account.storage_containers[k], {}),
       try(local.env_config.storage_account.storage_containers[k], {})
     ) }
+
+    storage_shares = { for k in setunion(keys(try(local.env_config.storage_account.storage_shares, {})), keys(try(var.config.global.storage_account.storage_shares, {}))) : k => merge(
+      {
+        quota = null
+      },
+      try(var.config.global.storage_account.storage_shares[k], {}),
+      try(local.env_config.storage_account.storage_shares[k], {})
+    ) }
   }
 }
 
@@ -89,4 +97,12 @@ resource "azurerm_storage_container" "this" {
   storage_account_name  = azurerm_storage_account.this.0.name
   container_access_type = each.value.container_access_type
   metadata              = each.value.metadata
+}
+
+resource "azurerm_storage_share" "this" {
+  for_each = { for k, v in local.config.storage_shares : k => v if length(azurerm_storage_account.this) > 0 }
+
+  name = each.key
+  storage_account_name = azurerm_storage_account.this.0.name
+  quota = each.value.quota
 }
