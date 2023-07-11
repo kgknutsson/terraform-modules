@@ -43,7 +43,9 @@ variable "tags" {
 
 variable "resource_group" {
   type        = object({
-    name = string
+    id       = string
+    name     = string
+    location = string
   })
   description = <<-EOT
   (Required) Resource group to create new resources in.

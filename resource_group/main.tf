@@ -3,7 +3,7 @@ locals {
 
   config = {
     name     = try(var.config.global.resource_group.name, var.config.global.name)
-    location = var.config.global.location
+    location = try(local.env_config.location, var.config.global.location)
 
     tags = merge(
       {

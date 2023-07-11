@@ -18,7 +18,7 @@ locals {
 
   config = {
     name                = var.config.global.name
-    location            = var.config.global.location
+    location            = var.resource_group.location
     resource_group_name = var.resource_group.name
 
     tags = merge(
