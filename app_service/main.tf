@@ -147,11 +147,10 @@ locals {
         application_stack = merge(
           {
             docker                      = []
-            docker_container_name       = null
-            docker_container_registry   = null
-            docker_container_tag        = null
-            docker_image                = null
-            docker_image_tag            = null
+            docker_image_name           = null
+            docker_registry_url         = null
+            docker_registry_username    = null
+            docker_registry_password    = null
             dotnet_version              = null
             use_dotnet_isolated_runtime = null
             go_version                  = null
@@ -397,20 +396,22 @@ resource "azurerm_linux_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
-        docker_image        = application_stack.value.docker_image
-        docker_image_tag    = application_stack.value.docker_image_tag
-        dotnet_version      = application_stack.value.dotnet_version
-        go_version          = application_stack.value.go_version
-        java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
-        java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
-        java_version        = application_stack.value.java_version
-        node_version        = application_stack.value.node_version
-        php_version         = application_stack.value.php_version
-        python_version      = application_stack.value.python_version
-        ruby_version        = application_stack.value.ruby_version
+        docker_image_name        = application_stack.value.docker_image_name
+        docker_registry_url      = application_stack.value.docker_registry_url
+        docker_registry_username = application_stack.value.docker_registry_username
+        docker_registry_password = application_stack.value.docker_registry_password
+        dotnet_version           = application_stack.value.dotnet_version
+        go_version               = application_stack.value.go_version
+        java_server              = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
+        java_server_version      = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
+        java_version             = application_stack.value.java_version
+        node_version             = application_stack.value.node_version
+        php_version              = application_stack.value.php_version
+        python_version           = application_stack.value.python_version
+        ruby_version             = application_stack.value.ruby_version
       }
     }
 
@@ -563,20 +564,22 @@ resource "azurerm_linux_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
-        docker_image        = application_stack.value.docker_image
-        docker_image_tag    = application_stack.value.docker_image_tag
-        dotnet_version      = application_stack.value.dotnet_version
-        go_version          = application_stack.value.go_version
-        java_server         = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
-        java_server_version = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
-        java_version        = application_stack.value.java_version
-        node_version        = application_stack.value.node_version
-        php_version         = application_stack.value.php_version
-        python_version      = application_stack.value.python_version
-        ruby_version        = application_stack.value.ruby_version
+        docker_image_name        = application_stack.value.docker_image_name
+        docker_registry_url      = application_stack.value.docker_registry_url
+        docker_registry_username = application_stack.value.docker_registry_username
+        docker_registry_password = application_stack.value.docker_registry_password
+        dotnet_version           = application_stack.value.dotnet_version
+        go_version               = application_stack.value.go_version
+        java_server              = try(application_stack.value.java_server, application_stack.value.java_version != null ? "JAVA" : null)
+        java_server_version      = try(application_stack.value.java_server_version, application_stack.value.java_version, null)
+        java_version             = application_stack.value.java_version
+        node_version             = application_stack.value.node_version
+        php_version              = application_stack.value.php_version
+        python_version           = application_stack.value.python_version
+        ruby_version             = application_stack.value.ruby_version
       }
     }
 
@@ -734,12 +737,13 @@ resource "azurerm_windows_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_container_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
-        docker_container_name        = application_stack.value.docker_container_name
-        docker_container_registry    = application_stack.value.docker_container_registry
-        docker_container_tag         = application_stack.value.docker_container_tag
+        docker_image_name            = application_stack.value.docker_image_name
+        docker_registry_url          = application_stack.value.docker_registry_url
+        docker_registry_username     = application_stack.value.docker_registry_username
+        docker_registry_password     = application_stack.value.docker_registry_password
         dotnet_version               = application_stack.value.dotnet_version
         java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null ? true : null)
         java_version                 = application_stack.value.java_version
@@ -909,12 +913,13 @@ resource "azurerm_windows_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_container_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
-        docker_container_name        = application_stack.value.docker_container_name
-        docker_container_registry    = application_stack.value.docker_container_registry
-        docker_container_tag         = application_stack.value.docker_container_tag
+        docker_image_name            = application_stack.value.docker_image_name
+        docker_registry_url          = application_stack.value.docker_registry_url
+        docker_registry_username     = application_stack.value.docker_registry_username
+        docker_registry_password     = application_stack.value.docker_registry_password
         dotnet_version               = application_stack.value.dotnet_version
         java_embedded_server_enabled = try(application_stack.value.java_embedded_server_enabled, application_stack.value.java_version != null ? true : null)
         java_version                 = application_stack.value.java_version
