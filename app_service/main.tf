@@ -1,18 +1,3 @@
-moved {
-  from = azurecaf_name.service_plan
-  to   = azurecaf_name.service_plan.0
-}
-
-moved {
-  from = azurerm_service_plan.this
-  to   = azurerm_service_plan.this.0
-}
-
-moved {
-  from = azurecaf_name.app_service
-  to   = azurecaf_name.app_service.0
-}
-
 locals {
   env_config = lookup(var.config, var.environment, {})
 

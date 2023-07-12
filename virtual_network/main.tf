@@ -1,13 +1,3 @@
-moved {
-  from = azurerm_private_dns_zone.this.0
-  to   = azurerm_private_dns_zone.this["privatelink.database.windows.net"]
-}
-
-moved {
-  from = azurerm_private_dns_zone_virtual_network_link.this.0
-  to   = azurerm_private_dns_zone_virtual_network_link.this["privatelink.database.windows.net"]
-}
-
 locals {
   env_config = lookup(var.config, var.environment, {})
 
