@@ -32,7 +32,7 @@ locals {
     network_rules = try(local.env_config.storage_account.network_rules, var.config.global.storage_account.network_rules, null) == null ? null : {
       bypass                     = coalescelist(tolist(setunion(try(local.env_config.storage_account.network_rules.bypass, []), try(var.config.global.storage_account.network_rules.bypass, []))), ["None"])  // Combination of Logging, Metrics, AzureServices, or None
       ip_rules                   = setunion(try(local.env_config.storage_account.network_rules.ip_rules, []), try(var.config.global.storage_account.network_rules.ip_rules, []))
-      virtual_network_subnet_ids = [ for i in setunion(try(local.env_config.storage_account.network_rules.virtual_network_subnet_ids, []), try(var.config.global.storage_account.network_rules.virtual_network_subnet_ids, [])) : try(var.virtual_network.subnet_ids[i], i)]
+      virtual_network_subnet_ids = [ for i in setunion(try(local.env_config.storage_account.network_rules.virtual_network_subnet_ids, []), try(var.config.global.storage_account.network_rules.virtual_network_subnet_ids, [])) : try(var.virtual_network.subnet_id_map[i], i)]
     }
 
     storage_containers = { for k in setunion(keys(try(local.env_config.storage_account.storage_containers, {})), keys(try(var.config.global.storage_account.storage_containers, {}))) : k => merge(

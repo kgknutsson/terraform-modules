@@ -56,9 +56,9 @@ locals {
     }
 
     virtual_network_subnet_id = try(
-      var.virtual_network.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+      var.virtual_network.subnet_id_map[local.env_config.app_service.virtual_network_subnet_id],
       local.env_config.app_service.virtual_network_subnet_id,
-      var.virtual_network.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+      var.virtual_network.subnet_id_map[var.config.global.app_service.virtual_network_subnet_id],
       var.config.global.app_service.virtual_network_subnet_id,
       null
     )
@@ -132,9 +132,9 @@ locals {
         use_32_bit_worker                             = false
 
         vnet_route_all_enabled = try(
-          var.virtual_network.subnet_ids[local.env_config.app_service.virtual_network_subnet_id],
+          var.virtual_network.subnet_id_map[local.env_config.app_service.virtual_network_subnet_id],
           local.env_config.app_service.virtual_network_subnet_id,
-          var.virtual_network.subnet_ids[var.config.global.app_service.virtual_network_subnet_id],
+          var.virtual_network.subnet_id_map[var.config.global.app_service.virtual_network_subnet_id],
           var.config.global.app_service.virtual_network_subnet_id,
           null
         ) != null

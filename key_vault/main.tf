@@ -42,14 +42,7 @@ locals {
       bypass                     = try(local.env_config.key_vault.network_acls.bypass, var.config.global.key_vault.network_acls.bypass, "AzureServices")
       default_action             = try(local.env_config.key_vault.network_acls.default_action, var.config.global.key_vault.network_acls.default_action, "Deny")
       ip_rules                   = concat(try(var.config.global.key_vault.network_acls.ip_rules, []), try(local.env_config.key_vault.network_acls.ip_rules, []))
-      virtual_network_subnet_ids = matchkeys(
-        try(values(var.virtual_network.subnet_ids), []),
-        try(keys(var.virtual_network.subnet_ids), []),
-        concat(
-          try(var.config.global.key_vault.network_acls.subnets, []),
-          try(local.env_config.key_vault.network_acls.subnets, [])
-        )
-      )
+      virtual_network_subnet_ids = [ for i in setunion(try(var.config.global.key_vault.network_acls.subnets, []), try(local.env_config.key_vault.network_acls.subnets, [])) : try(var.virtual_network.subnet_id_map[i], i) ]
     }
   }
 }

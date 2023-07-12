@@ -70,7 +70,8 @@ variable "app_service" {
 
 variable "virtual_network" {
   type        = object({
-    subnet_ids = map(string)
+    id            = string
+    subnet_id_map = map(string)
   })
   description = <<-EOT
   (Optional) Virtual Network to associate with App Service.

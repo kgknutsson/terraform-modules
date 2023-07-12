@@ -25,9 +25,9 @@ locals {
     gateway_ip_configuration = {
       name      = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
       subnet_id = try(
-        var.virtual_network.subnet_ids[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
+        var.virtual_network.subnet_id_map[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
         local.env_config.application_gateway.gateway_ip_configuration.subnet_id,
-        var.virtual_network.subnet_ids[var.config.global.application_gateway.gateway_ip_configuration.subnet_id],
+        var.virtual_network.subnet_id_map[var.config.global.application_gateway.gateway_ip_configuration.subnet_id],
         var.config.global.application_gateway.gateway_ip_configuration.subnet_id
       )
     }
