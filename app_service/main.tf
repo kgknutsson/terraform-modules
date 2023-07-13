@@ -256,7 +256,7 @@ resource "azurerm_application_insights" "this" {
   resource_group_name  = local.config.resource_group_name
   location             = local.config.location
   tags                 = local.config.tags
-  application_type     = local.config.type == "WebApp" ? local.config.insights.application_type : "web"
+  application_type     = local.config.insights.application_type
   daily_data_cap_in_gb = local.config.insights.daily_data_cap_in_gb
   disable_ip_masking   = local.config.insights.disable_ip_masking
   workspace_id         = local.config.insights.workspace_id
