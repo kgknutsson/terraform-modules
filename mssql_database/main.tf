@@ -85,6 +85,20 @@ locals {
         ) }
       }
     ) }
+
+    monitor_activity_log_alerts = { for k in setunion(keys(try(local.env_config.mssql_database.monitor.activity_log_alerts, {})), keys(try(var.config.global.mssql_database.monitor.activity_log_alerts, {}))) : k => concat(
+      try(local.env_config.mssql_database.monitor.activity_log_alerts[k], []),
+      try(var.config.global.mssqldatabase.monitor.activity_log_alerts[k], [])
+    ) }
+
+    monitor_metric_alerts = { for k in setunion(keys(try(local.env_config.mssql_database.monitor.metric_alerts, {})), keys(try(var.config.global.mssql_database.monitor.metric_alerts, {}))) : k => concat(
+      try(local.env_config.mssql_database.monitor.metric_alerts[k], []),
+      try(var.config.global.mssqldatabase.monitor.metric_alerts[k], [])
+    ) }
+
+    monitor_activity_log_alerts_enabled = try(local.env_config.mssql_database.monitor.activity_log_alerts_enabled, var.config.global.mssql_database.monitor.activity_log_alerts_enabled, true)
+    monitor_metric_alerts_enabled       = try(local.env_config.mssql_database.monitor.metric_alerts_enabled, var.config.global.mssql_database.monitor.metric_alerts_enabled, true)
+    monitor_default_action_group_ids    = concat(try(local.env_config.mssql_database.monitor.default_action_group_ids, []), try(var.config.global.mssql_database.monitor.default_action_group_ids, []))
   }
 }
 

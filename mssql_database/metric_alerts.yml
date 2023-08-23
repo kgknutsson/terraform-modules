@@ -1,0 +1,46 @@
+mssql_elasticpool:
+  - name: Data space usage above threshold - All SQL Elastic Pools
+    description: Whenever the max data space used percentage is greater than 85%
+    target_resource_type: Microsoft.Sql/servers/elasticpools
+    severity: 2
+    window_size: PT5M
+    criteria:
+      - metric_namespace: Microsoft.Sql/servers/elasticpools
+        metric_name: storage_percent
+        aggregation: Maximum
+        operator: GreaterThan
+        threshold: 85
+mssql_database:
+  - name: DTU usage above threshold - All SQL Databases
+    description: Whenever the max DTU percentage is greater than 95%
+    target_resource_type: Microsoft.Sql/servers/databases
+    severity: 2
+    window_size: PT15M
+    criteria:
+      - metric_namespace: Microsoft.Sql/servers/databases
+        metric_name: dtu_consumption_percent
+        aggregation: Maximum
+        operator: GreaterThan
+        threshold: 95
+  - name: Data IO usage above threshold - All SQL Databases
+    description: Whenever the max data IO percentage is greater than 95%
+    target_resource_type: Microsoft.Sql/servers/databases
+    severity: 2
+    window_size: PT15M
+    criteria:
+      - metric_namespace: Microsoft.Sql/servers/databases
+        metric_name: physical_data_read_percent
+        aggregation: Maximum
+        operator: GreaterThan
+        threshold: 95
+  - name: Data space usage above threshold - All SQL Databases
+    description: Whenever the max data space used percentage is greater than 85%
+    target_resource_type: Microsoft.Sql/servers/databases
+    severity: 2
+    window_size: PT5M
+    criteria:
+      - metric_namespace: Microsoft.Sql/servers/databases
+        metric_name: storage_percent
+        aggregation: Maximum
+        operator: GreaterThan
+        threshold: 85

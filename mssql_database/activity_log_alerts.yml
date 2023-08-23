@@ -1,0 +1,11 @@
+mssql_database:
+  - name: Resource health - All SQL Databases
+    description: Whenever a SQL database is unhealthy
+    criteria:
+      resource_types:
+        - Microsoft.Sql/servers/databases
+      category: ResourceHealth
+      resource_health:
+        current:
+          - Degraded
+          - Unavailable
