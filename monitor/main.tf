@@ -182,7 +182,7 @@ resource "azurerm_monitor_action_group" "this" {
 resource "azurerm_monitor_activity_log_alert" "this" {
   for_each = { for i in local.config.activity_log_alerts : i.name => i }
 
-  name                     = try(each.value.formatted_name, each.key)
+  name                     = coalesce(each.value.formatted_name, each.key)
   resource_group_name      = local.config.resource_group_name
   tags                     = local.config.tags
   scopes                   = each.value.scopes
@@ -216,7 +216,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
 resource "azurerm_monitor_metric_alert" "this" {
   for_each = { for i in local.config.metric_alerts : i.name => i }
 
-  name                     = try(each.value.formatted_name, each.key)
+  name                     = coalesce(each.value.formatted_name, each.key)
   resource_group_name      = local.config.resource_group_name
   tags                     = local.config.tags
   scopes                   = each.value.scopes
