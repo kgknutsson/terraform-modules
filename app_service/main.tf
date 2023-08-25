@@ -373,7 +373,7 @@ resource "azurerm_linux_web_app" "this" {
               status_code_range = status_code.value.status_code_range
               path              = try(status_code.value.path, null)
               sub_status        = try(status_code.value.sub_status, null)
-              win32_status      = try(status_code.value.win32_status, null)
+              win32_status_code = try(status_code.value.win32_status_code, null)
             }
           }
         }
@@ -541,7 +541,7 @@ resource "azurerm_linux_web_app_slot" "this" {
               status_code_range = status_code.value.status_code_range
               path              = try(status_code.value.path, null)
               sub_status        = try(status_code.value.sub_status, null)
-              win32_status      = try(status_code.value.win32_status, null)
+              win32_status_code = try(status_code.value.win32_status_code, null)
             }
           }
         }
@@ -714,7 +714,7 @@ resource "azurerm_windows_web_app" "this" {
               status_code_range = status_code.value.status_code_range
               path              = try(status_code.value.path, null)
               sub_status        = try(status_code.value.sub_status, null)
-              win32_status      = try(status_code.value.win32_status, null)
+              win32_status_code = try(status_code.value.win32_status_code, null)
             }
           }
         }
@@ -890,7 +890,7 @@ resource "azurerm_windows_web_app_slot" "this" {
               status_code_range = status_code.value.status_code_range
               path              = try(status_code.value.path, null)
               sub_status        = try(status_code.value.sub_status, null)
-              win32_status      = try(status_code.value.win32_status, null)
+              win32_status_code = try(status_code.value.win32_status_code, null)
             }
           }
         }
