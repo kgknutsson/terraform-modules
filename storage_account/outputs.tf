@@ -12,3 +12,8 @@ output "primary_access_key" {
   value       = try(azurerm_storage_account.this.0.primary_access_key, null)
   description = "Storage Account primary access key."
 }
+
+output "primary_blob_endpoint" {
+  value       = try(azurerm_storage_account.this.0.primary_blob_endpoint, null)
+  description = "Storage Account primary blob endpoint."
+}
