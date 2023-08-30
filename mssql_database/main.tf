@@ -173,10 +173,10 @@ resource "azurecaf_name" "mssql_database" {
 
   name          = each.key
   resource_type = "azurerm_mssql_database"
-  prefixes       = local.config.naming["azurerm_mssql_database"].prefixes
-  suffixes       = local.config.naming["azurerm_mssql_database"].suffixes
-  random_length  = local.config.naming["azurerm_mssql_database"].random_length
-  use_slug       = local.config.naming["azurerm_mssql_database"].use_slug
+  prefixes      = local.config.naming["azurerm_mssql_database"].prefixes
+  suffixes      = local.config.naming["azurerm_mssql_database"].suffixes
+  random_length = local.config.naming["azurerm_mssql_database"].random_length
+  use_slug      = local.config.naming["azurerm_mssql_database"].use_slug
 }
 
 resource "azurerm_mssql_database" "this" {

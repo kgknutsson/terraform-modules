@@ -1,7 +1,7 @@
 locals {
   resource_map = {
-    mssql_elasticpool = length(azurerm_mssql_elasticpool.this) > 0 ? { name = var.resource_group.name, scopes = [ for k, v in azurerm_mssql_elasticpool.this : v.id ] } : null
-    mssql_database    = var.resource_group
+    mssql_elasticpool = length(local.config.elastic_pools) > 0 ? { name = var.resource_group.name, scopes = [ for k, v in azurerm_mssql_elasticpool.this : v.id ] } : null
+    mssql_database    = length(local.config.databases) > 0 ? var.resource_group : null
   }
 
   activity_log_alerts = flatten([
