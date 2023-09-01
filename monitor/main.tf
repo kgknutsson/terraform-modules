@@ -191,7 +191,18 @@ resource "azurerm_monitor_activity_log_alert" "this" {
   enabled                  = try(each.value.enabled, true)
 
   criteria {
-    category = each.value.criteria.category // Administrative, Autoscale, Policy, Recommendation, ResourceHealth, Security or ServiceHealth
+    category        = each.value.criteria.category // Administrative, Autoscale, Policy, Recommendation, ResourceHealth, Security or ServiceHealth
+    resource_groups = try(each.value.criteria.resource_groups, [])
+    resource_types  = try(each.value.criteria.resource_types, [])
+
+    dynamic "resource_health" {
+      for_each = try(each.value.criteria.resource_health[*], [])
+      content {
+        current  = try(resource_health.value.current, [])
+        previous = try(resource_health.value.previous, [])
+        reason   = try(resource_health.value.reason, [])
+      }
+    }
 
     dynamic "service_health" {
       for_each = try(each.value.criteria.service_health[*], [])

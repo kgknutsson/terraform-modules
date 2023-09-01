@@ -60,7 +60,7 @@ variable "monitor_config" {
       scopes                                                       = list(string)
       description                                                  = optional(string)
       enabled                                                      = optional(bool)
-      criteria                                                     = optional(any, [])
+      criteria                                                     = any
       action                                                       = optional(any, [])
     })), [])
     metric_alerts       = optional(list(object({
