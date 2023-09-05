@@ -90,11 +90,11 @@ resource "azurerm_subnet" "this" {
     for_each = local.config.subnets[each.key].service_delegation[*]
 
     content {
-      name = "delegation"
+      name = try(delegation.value.name, delegation.value)
 
       service_delegation {
-        name    = delegation.value
-        actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
+        name    = try(delegation.value.name, delegation.value)
+        actions = try(delegation.value.actions, ["Microsoft.Network/virtualNetworks/subnets/action"])
       }
     }
   }
