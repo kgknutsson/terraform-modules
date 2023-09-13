@@ -130,9 +130,11 @@ resource "azurerm_vpn_site" "this" {
     for_each = each.value.links
 
     content {
-      name       = link.key
-      fqdn       = try(link.value.fqdn, null)
-      ip_address = try(link.value.ip_address, null)
+      name          = link.key
+      fqdn          = try(link.value.fqdn, null)
+      ip_address    = try(link.value.ip_address, null)
+      provider_name = try(link.value.provider_name, null)
+      speed_in_mbps = try(link.value.speed_in_mbps, null)
     }
   }
 }
