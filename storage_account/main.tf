@@ -28,6 +28,7 @@ locals {
     shared_access_key_enabled     = try(local.env_config.storage_account.shared_access_key_enabled, var.config.global.storage_account.shared_access_key_enabled, true)
     public_network_access_enabled = try(local.env_config.storage_account.public_network_access_enabled, var.config.global.storage_account.public_network_access_enabled, true)
     is_hns_enabled                = try(local.env_config.storage_account.is_hns_enabled, var.config.global.storage_account.is_hns_enabled, false)
+    sftp_enabled                  = try(local.env_config.storage_account.sftp_enabled, var.config.global.storage_account.sftp_enabled, false)
 
     network_rules = try(local.env_config.storage_account.network_rules, var.config.global.storage_account.network_rules, null) == null ? null : {
       bypass                     = coalescelist(tolist(setunion(try(local.env_config.storage_account.network_rules.bypass, []), try(var.config.global.storage_account.network_rules.bypass, []))), ["None"])  // Combination of Logging, Metrics, AzureServices, or None
@@ -68,6 +69,7 @@ resource "azurerm_storage_account" "this" {
   shared_access_key_enabled     = local.config.shared_access_key_enabled
   public_network_access_enabled = local.config.public_network_access_enabled
   is_hns_enabled                = local.config.is_hns_enabled
+  sftp_enabled                  = local.config.sftp_enabled
   tags                          = local.config.tags
 
   dynamic "network_rules" {
