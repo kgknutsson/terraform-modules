@@ -19,7 +19,6 @@ locals {
       try(local.env_config.storage_account.tags, {})
     )
 
-    enabled                       = can(try(var.config.global.storage_account, local.env_config.storage_account))
     account_kind                  = try(local.env_config.storage_account.account_kind, var.config.global.storage_account.account_kind, "StorageV2") // BlobStorage, BlockBlobStorage, FileStorage, Storage or StorageV2
     account_tier                  = try(local.env_config.storage_account.account_tier, var.config.global.storage_account.account_tier, null) // Standard or Premium
     account_replication_type      = try(local.env_config.storage_account.account_replication_type, var.config.global.storage_account.account_replication_type, "LRS") // LRS, GRS, RAGRS, ZRS, GZRS or RAGZRS
@@ -43,6 +42,18 @@ locals {
       },
       try(var.config.global.storage_account.storage_containers[k], {}),
       try(local.env_config.storage_account.storage_containers[k], {})
+    ) }
+
+    local_users = { for k in setunion(keys(try(local.env_config.storage_account.local_users, {})), keys(try(var.config.global.storage_account.local_users, {}))) : k => merge(
+      {
+        ssh_key_enabled      = null
+        ssh_password_enabled = null
+        home_directory       = null
+        ssh_authorized_keys  = []
+        permission_scopes    = {}
+      },
+      try(var.config.global.storage_account.local_users[k], {}),
+      try(local.env_config.storage_account.local_users[k], {})
     ) }
   }
 }
@@ -91,4 +102,40 @@ resource "azurerm_storage_container" "this" {
   storage_account_name  = azurerm_storage_account.this.0.name
   container_access_type = each.value.container_access_type
   metadata              = each.value.metadata
+}
+
+resource "azurerm_storage_account_local_user" "this" {
+  for_each = { for k, v in local.config.local_users : k => v if length(azurerm_storage_account.this) > 0 }
+
+  name                 = each.key
+  storage_account_id   = azurerm_storage_account.this.0.id
+  ssh_key_enabled      = each.value.ssh_key_enabled
+  ssh_password_enabled = each.value.ssh_password_enabled
+  home_directory       = each.value.home_directory
+
+  dynamic "ssh_authorized_key" {
+    for_each = each.value.ssh_authorized_keys
+
+    content {
+      key         = try(ssh_authorized_key.value.key, ssh_authorized_key.value)
+      description = try(ssh_authorized_key.value.description, null)
+    }
+  }
+
+  dynamic "permission_scope" {
+    for_each = each.value.permission_scopes
+
+    content {
+      resource_name = permission_scope.key
+      service       = "blob"
+
+      permissions {
+        create = contains(permission_scope.value.permissions, "create")
+        delete = contains(permission_scope.value.permissions, "delete")
+        list   = contains(permission_scope.value.permissions, "list")
+        read   = contains(permission_scope.value.permissions, "read")
+        write  = contains(permission_scope.value.permissions, "write")
+      }
+    }
+  }
 }
