@@ -1,5 +1,40 @@
 locals {
-  default_hostname = try(try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).default_hostname, null)
+  resource_map = {
+    app_service  = local.config.type != null ? try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0) : null
+    service_plan = local.config.sku_name != null ? azurerm_service_plan.this.0 : null
+    app_insights = length(local.config.insights.workspace_id[*]) > 0 ? azurerm_application_insights.this.0 : null
+  }
+
+  diagnostic_settings = try(
+    [
+      merge(
+        local.config.monitor_diagnostic_setting,
+        {
+          name                       = "SendToLogAnalytics"
+          target_resource_id         = local.resource_map["app_service"].id
+          log_analytics_workspace_id = local.config.insights.workspace_id
+        }
+      )
+    ],
+    []
+  )
+
+  metric_alerts = nonsensitive(flatten([
+    for k, v in yamldecode(
+      file("${path.module}/metric_alerts.yml")
+    ) : [
+      for i in try(local.config.monitor_metric_alerts[k], v) : merge(
+        i,
+        {
+          formatted_name = format("%s - %s", i.name, local.resource_map[k].name)
+          #scopes         = ["/subscriptions/6df066cb-762a-4a8e-afbd-2974c73fa44a/resourceGroups/rg-ec-prod"]
+          scopes         = [local.resource_map[k].id]
+          action         = [ for id in local.config.monitor_default_action_group_ids : { action_group_id = id } ]
+
+        }
+      )
+    ] if local.resource_map[k] != null && local.config.monitor_metric_alerts_enabled
+  ]))
 }
 
 output "service_plan_id" {
@@ -28,7 +63,7 @@ output "user_assigned_identity_client_id" {
 }
 
 output "application_hostname" {
-  value       = try("https://${local.default_hostname}", null)
+  value       = try(format("https://%s", local.resource_map["app_service"].default_hostname), null)
   description = "Application URL."
 }
 
@@ -40,4 +75,11 @@ output "application_caf_name" {
 output "database_jdbc_string" {
   value       = local.database_jdbc_basestring
   description = "Database URL."
+}
+
+output "monitor_config" {
+  value = {
+    diagnostic_settings = local.diagnostic_settings
+    metric_alerts       = local.metric_alerts
+  }
 }

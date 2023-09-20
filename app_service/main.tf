@@ -35,11 +35,6 @@ locals {
     zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
     acr_id                             = try(local.env_config.app_service.acr_id, var.config.global.app_service.acr_id, null)
 
-    metric_alerts = {
-      enabled          = try(local.env_config.app_service.metric_alerts.enabled, var.config.global.app_service.metric_alerts.enabled, true)
-      action_group_ids = concat(try(local.env_config.app_service.metric_alerts.action_group_ids, []), try(var.config.global.app_service.metric_alerts.action_group_ids, []))
-    }
-
     virtual_network_subnet_id = try(
       var.virtual_network.subnet_id_map[local.env_config.app_service.virtual_network_subnet_id],
       local.env_config.app_service.virtual_network_subnet_id,
@@ -56,6 +51,14 @@ locals {
       try(coalesce(var.config.global.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {}),
       try(coalesce(local.env_config.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {})
     )
+
+    monitor_metric_alerts = { for k in setunion(keys(try(local.env_config.app_service.monitor.metric_alerts, {})), keys(try(var.config.global.app_service.monitor.metric_alerts, {}))) : k => concat(
+      try(local.env_config.app_service.monitor.metric_alerts[k], []),
+      try(var.config.global.app_service.monitor.metric_alerts[k], [])
+    ) }
+
+    monitor_metric_alerts_enabled    = try(local.env_config.app_service.monitor.metric_alerts_enabled, var.config.global.app_service.monitor.metric_alerts_enabled, local.env_config.app_service.metric_alerts.enabled, var.config.global.app_service.metric_alerts.enabled, true)
+    monitor_default_action_group_ids = distinct(concat(try(local.env_config.app_service.monitor.default_action_group_ids, []), try(var.config.global.app_service.monitor.default_action_group_ids, []), try(local.env_config.app_service.metric_alerts.action_group_ids, []), try(var.config.global.app_service.metric_alerts.action_group_ids, [])))
 
     insights = {
       application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
