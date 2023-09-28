@@ -6,6 +6,20 @@ locals {
     location            = var.resource_group.location
     resource_group_name = var.resource_group.name
 
+    naming = {
+      for i in ["azurerm_application_insights"] : i => merge(
+        {
+          name          = var.config.global.name
+          prefixes      = null
+          suffixes      = compact([var.environment])
+          random_length = null
+          use_slug      = null
+        },
+        try(lookup(var.config.global.app_service.naming, i), {}),
+        try(lookup(local.env_config.app_service.naming, i), {})
+      )
+    }
+
     tags = merge(
       {
         application = var.config.global.name
@@ -61,6 +75,7 @@ locals {
       application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
       disable_ip_masking   = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
       daily_data_cap_in_gb = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
+      sampling_percentage  = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
       workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, null)
       config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
     }
@@ -244,9 +259,12 @@ resource "azurerm_service_plan" "this" {
 resource "azurecaf_name" "application_insights" {
   count = length(local.config.insights.workspace_id[*])
 
-  name          = local.config.name
+  name          = local.config.naming["azurerm_application_insights"].name
   resource_type = "azurerm_application_insights"
-  suffixes      = [var.environment]
+  prefixes      = local.config.naming["azurerm_application_insights"].prefixes
+  suffixes      = local.config.naming["azurerm_application_insights"].suffixes
+  random_length = local.config.naming["azurerm_application_insights"].random_length
+  use_slug      = local.config.naming["azurerm_application_insights"].use_slug
 }
 
 resource "azurerm_application_insights" "this" {
@@ -259,6 +277,7 @@ resource "azurerm_application_insights" "this" {
   application_type     = local.config.insights.application_type
   daily_data_cap_in_gb = local.config.insights.daily_data_cap_in_gb
   disable_ip_masking   = local.config.insights.disable_ip_masking
+  sampling_percentage  = local.config.insights.sampling_percentage
   workspace_id         = local.config.insights.workspace_id
 }
 

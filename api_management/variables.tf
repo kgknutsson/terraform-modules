@@ -50,3 +50,16 @@ variable "resource_group" {
   Resource Group resources created outside this module.
   EOT
 }
+
+variable "app_service" {
+  type        = object({
+    application_insights_resource_id       = optional(string)
+    application_insights_connection_string = optional(string)
+  })
+  description = <<-EOT
+  (Optional) Shared app service resources.
+
+  App Service resources created outside this module.
+  EOT
+  default     = null
+}

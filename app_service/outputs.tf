@@ -12,6 +12,11 @@ output "service_plan_os_type" {
   description = "Service plan OS type."
 }
 
+output "application_insights_resource_id" {
+  value       = try(azurerm_application_insights.this.0.id, var.app_service.application_insights_resource_id, null)
+  description = "Application insights resource id."
+}
+
 output "application_insights_connection_string" {
   value       = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
   description = "Application insights connection string."

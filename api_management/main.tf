@@ -50,6 +50,7 @@ locals {
           protocols     = ["https"] // http, https, ws and wss
           import        = null
           policy        = null
+          diagnostic    = null
           operations    = []
           products      = []
         },
@@ -86,6 +87,37 @@ locals {
         try(local.env_config.api_management.backends[k], {})
       )
     }
+
+    loggers = {
+      for k in keys(merge(
+        try(var.config.global.api_management.loggers, {}),
+        try(local.env_config.api_management.loggers, {})
+      )) : k => merge(
+        {
+          resource_id          = try(var.app_service.application_insights_resource_id, null)
+          description          = null
+          buffered             = null
+          application_insights = null
+        },
+        try(var.config.global.api_management.loggers[k], {}),
+        try(local.env_config.api_management.loggers[k], {})
+      )
+    }
+
+    diagnostic = merge(
+      {
+        logger_id                 = null
+        identifier                = "applicationinsights"
+        always_log_errors         = null
+        http_correlation_protocol = null
+        log_client_ip             = null
+        operation_name_format     = null
+        sampling_percentage       = null
+        verbosity                 = null
+      },
+      try(local.env_config.api_management.diagnostic, {}),
+      try(var.config.global.api_management.diagnostic, {})
+    )
   }
 
   default_api_operations = [
@@ -149,6 +181,35 @@ resource "azurerm_api_management_api" "this" {
       }
     }
   }
+}
+
+resource "azurerm_api_management_api_diagnostic" "this" {
+  for_each = {
+    for k, v in local.config.apis : k => merge(
+      {
+        identifier                = "applicationinsights"
+        always_log_errors         = null
+        http_correlation_protocol = null
+        log_client_ip             = null
+        operation_name_format     = null
+        sampling_percentage       = null
+        verbosity                 = null
+      },
+      v.diagnostic
+    ) if v.diagnostic != null
+  }
+  
+  api_name                  = azurerm_api_management_api.this[each.key].name
+  api_management_name       = azurerm_api_management.this.name
+  api_management_logger_id  = try(azurerm_api_management_logger.this[each.value.logger_id].id, each.value.logger_id)
+  resource_group_name       = local.config.resource_group_name
+  identifier                = each.value.identifier
+  always_log_errors         = each.value.always_log_errors
+  http_correlation_protocol = each.value.http_correlation_protocol
+  log_client_ip             = each.value.log_client_ip
+  operation_name_format     = each.value.operation_name_format
+  sampling_percentage       = each.value.sampling_percentage
+  verbosity                 = each.value.verbosity
 }
 
 resource "azurerm_api_management_api_operation" "this" {
@@ -216,4 +277,41 @@ resource "azurerm_api_management_backend" "this" {
   protocol            = each.value.protocol
   url                 = coalesce(each.value.url, format("https://%s.azurewebsites.net", split("/", each.value.resource_id)[8]))
   resource_id         = try("https://management.azure.com${each.value.resource_id}", null)
+}
+
+resource "azurerm_api_management_logger" "this" {
+  for_each = local.config.loggers
+
+  api_management_name = azurerm_api_management.this.name
+  resource_group_name = local.config.resource_group_name
+  name                = each.key
+  description         = each.value.description
+  resource_id         = each.value.resource_id
+  buffered            = each.value.buffered
+
+  dynamic "application_insights" {
+    for_each = each.value.application_insights[*]
+
+    content {
+      instrumentation_key = try(
+        application_insights.value.instrumentation_key,
+        regex("(?:InstrumentationKey=)(?P<instrumentation_key>.+?)(?:;)", var.app_service.application_insights_connection_string).instrumentation_key
+      )
+    }
+  }
+}
+
+resource "azurerm_api_management_diagnostic" "this" {
+  count = local.config.diagnostic.logger_id != null ? 1 : 0
+
+  api_management_name       = azurerm_api_management.this.name
+  api_management_logger_id  = try(azurerm_api_management_logger.this[local.config.diagnostic.logger_id].id, local.config.diagnostic.logger_id)
+  resource_group_name       = local.config.resource_group_name
+  identifier                = local.config.diagnostic.identifier
+  always_log_errors         = local.config.diagnostic.always_log_errors
+  http_correlation_protocol = local.config.diagnostic.http_correlation_protocol
+  log_client_ip             = local.config.diagnostic.log_client_ip
+  operation_name_format     = local.config.diagnostic.operation_name_format
+  sampling_percentage       = local.config.diagnostic.sampling_percentage
+  verbosity                 = local.config.diagnostic.verbosity
 }
