@@ -114,6 +114,10 @@ locals {
         operation_name_format     = null
         sampling_percentage       = null
         verbosity                 = null
+        backend_request           = null
+        backend_response          = null
+        frontend_request          = null
+        frontend_response         = null
       },
       try(local.env_config.api_management.diagnostic, {}),
       try(var.config.global.api_management.diagnostic, {})
@@ -194,6 +198,10 @@ resource "azurerm_api_management_api_diagnostic" "this" {
         operation_name_format     = null
         sampling_percentage       = null
         verbosity                 = null
+        backend_request           = null
+        backend_response          = null
+        frontend_request          = null
+        frontend_response         = null
       },
       v.diagnostic
     ) if v.diagnostic != null
@@ -210,6 +218,138 @@ resource "azurerm_api_management_api_diagnostic" "this" {
   operation_name_format     = each.value.operation_name_format
   sampling_percentage       = each.value.sampling_percentage
   verbosity                 = each.value.verbosity
+
+  dynamic "backend_request" {
+    for_each = each.value.backend_request[*]
+
+    content {
+      body_bytes     = try(backend_request.value.body_bytes, null)
+      headers_to_log = try(backend_request.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(backend_request.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "backend_response" {
+    for_each = each.value.backend_response[*]
+
+    content {
+      body_bytes     = try(backend_response.value.body_bytes, null)
+      headers_to_log = try(backend_response.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(backend_response.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "frontend_request" {
+    for_each = each.value.frontend_request[*]
+
+    content {
+      body_bytes     = try(frontend_request.value.body_bytes, null)
+      headers_to_log = try(frontend_request.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(frontend_request.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "frontend_response" {
+    for_each = each.value.frontend_response[*]
+
+    content {
+      body_bytes     = try(frontend_response.value.body_bytes, null)
+      headers_to_log = try(frontend_response.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(frontend_response.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 resource "azurerm_api_management_api_operation" "this" {
@@ -314,4 +454,136 @@ resource "azurerm_api_management_diagnostic" "this" {
   operation_name_format     = local.config.diagnostic.operation_name_format
   sampling_percentage       = local.config.diagnostic.sampling_percentage
   verbosity                 = local.config.diagnostic.verbosity
+
+  dynamic "backend_request" {
+    for_each = local.config.diagnostic.backend_request[*]
+
+    content {
+      body_bytes     = try(backend_request.value.body_bytes, null)
+      headers_to_log = try(backend_request.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(backend_request.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "backend_response" {
+    for_each = local.config.diagnostic.backend_response[*]
+
+    content {
+      body_bytes     = try(backend_response.value.body_bytes, null)
+      headers_to_log = try(backend_response.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(backend_response.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "frontend_request" {
+    for_each = local.config.diagnostic.frontend_request[*]
+
+    content {
+      body_bytes     = try(frontend_request.value.body_bytes, null)
+      headers_to_log = try(frontend_request.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(frontend_request.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
+
+  dynamic "frontend_response" {
+    for_each = local.config.diagnostic.frontend_response[*]
+
+    content {
+      body_bytes     = try(frontend_response.value.body_bytes, null)
+      headers_to_log = try(frontend_response.value.headers_to_log, null)
+
+      dynamic "data_masking" {
+        for_each = try(frontend_response.value.data_masking[*], [])
+
+        content {
+          dynamic "headers" {
+            for_each = try(data_masking.value.headers[*], [])
+
+            content {
+              mode  = headers.value.mode
+              value = headers.value.value
+            }
+          }
+
+          dynamic "query_params" {
+            for_each = try(data_masking.value.query_params[*], [])
+
+            content {
+              mode  = query_params.value.mode
+              value = query_params.value.value
+            }
+          }
+        }
+      }
+    }
+  }
 }
