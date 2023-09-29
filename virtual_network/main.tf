@@ -30,16 +30,15 @@ locals {
       is_manual_connection           = try(local.env_config.virtual_network.subnets[k].is_manual_connection, var.config.global.virtual_network.subnets[k].is_manual_connection, false)
       security_group_rules           = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
     } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
+
+    private_dns_zones = merge(
+      try(var.config.global.virtual_network.private_dns_zones, {}),
+      try(local.env_config.virtual_network.private_dns_zones, {})
+    )
   }
 
-  subresource_dns_zone_map = {
-    sqlServer = "privatelink.database.windows.net"
-    vault     = "privatelink.vaultcore.azure.net"
-  }
-
-  subnet_dns_zone_map = {
-    for k, v in local.config.subnets : k => local.subresource_dns_zone_map[v.subresource_names.0] if local.config.subnets[k].private_connection_resource_id != null
-  }
+  subresource_dns_zone_map = yamldecode(file("${path.module}/private_endpoint_dns_zones.yml"))
+  subnet_dns_zone_map      = { for k, v in local.config.subnets : k => local.subresource_dns_zone_map[v.subresource_names.0] if v.private_connection_resource_id != null }
 }
 
 resource "azurecaf_name" "virtual_network" {
@@ -103,7 +102,7 @@ resource "azurerm_subnet" "this" {
 }
 
 resource "azurerm_private_dns_zone" "this" {
-  for_each = toset([ for k, v in local.subresource_dns_zone_map : v if contains(flatten(values(local.config.subnets)[*].subresource_names), k) ])
+  for_each = setunion(keys(local.config.private_dns_zones), values(local.subnet_dns_zone_map))
 
   name                = each.key
   resource_group_name = azurerm_virtual_network.this.0.resource_group_name
@@ -115,8 +114,9 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
 
   name                  = azurerm_virtual_network.this.0.name
   resource_group_name   = azurerm_virtual_network.this.0.resource_group_name
-  private_dns_zone_name = each.key
   virtual_network_id    = azurerm_virtual_network.this.0.id
+  private_dns_zone_name = each.key
+  registration_enabled  = try(local.config.private_dns_zones[each.key].registration_enabled, null)
   tags                  = local.config.tags
 }
 

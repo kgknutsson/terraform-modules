@@ -1,0 +1,5 @@
+blob: privatelink.blob.core.windows.net
+file: privatelink.file.core.windows.net
+mysqlServer: privatelink.mysql.database.azure.com
+sqlServer: privatelink.database.windows.net
+vault: privatelink.vaultcore.azure.net
