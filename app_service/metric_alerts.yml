@@ -1,0 +1,48 @@
+app_service:
+  - name: App is unhealthy
+    description: Whenever the average health check status is less than 100%
+    target_resource_type: Microsoft.Web/sites
+    severity: 1
+    window_size: PT5M
+    criteria:
+      - metric_namespace: Microsoft.Web/sites
+        metric_name: HealthCheckStatus
+        aggregation: Average
+        operator: LessThan
+        threshold: 100
+service_plan:
+  - name: CPU usage above threshold
+    description: Whenever the average cpu percentage is greater than 90%
+    target_resource_type: Microsoft.Web/serverfarms
+    severity: 2
+    window_size: PT15M
+    criteria:
+      - metric_namespace: microsoft.web/serverfarms
+        metric_name: CpuPercentage
+        aggregation: Average
+        operator: GreaterThan
+        threshold: 90
+  - name: Memory usage above threshold
+    description: Whenever the avg memory percentage is greater than 90%
+    target_resource_type: Microsoft.Web/serverfarms
+    severity: 2
+    window_size: PT15M
+    criteria:
+      - metric_namespace: microsoft.web/serverfarms
+        metric_name: MemoryPercentage
+        aggregation: Average
+        operator: GreaterThan
+        threshold: 90
+app_insights:
+  - name: Java heap usage above threshold
+    description: Whenever the avg % of max heap memory used is greater than 80
+    target_resource_type: Microsoft.Insights/Components
+    severity: 2
+    window_size: PT15M
+    criteria:
+      - metric_namespace: azure.applicationinsights
+        metric_name: '% Of Max Heap Memory Used'
+        aggregation: Average
+        operator: GreaterThan
+        threshold: 80
+        skip_metric_validation: true # Needed as sometimes the metric hasn't been reported yet
