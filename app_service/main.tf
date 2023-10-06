@@ -474,6 +474,9 @@ resource "azurerm_linux_web_app" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
@@ -812,6 +815,9 @@ resource "azurerm_windows_web_app" "this" {
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
