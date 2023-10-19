@@ -70,6 +70,10 @@ locals {
         sku_name                       = try(local.env_config.mssql_database.default_sku_name, var.config.global.mssql_database.default_sku_name, "S0")
         elastic_pool                   = try(local.env_config.mssql_database.default_elastic_pool, var.config.global.mssql_database.default_elastic_pool, null)
         zone_redundant                 = try(local.env_config.mssql_database.default_zone_redundant, var.config.global.mssql_database.default_zone_redundant, false)
+        weekly_retention               = try(local.env_config.mssql_database.default_weekly_retention, var.config.global.mssql_database.default_weekly_retention, "PT0S") //P1Y, P1M, P1W, P7D etc.
+        monthly_retention              = try(local.env_config.mssql_database.default_monthly_retention, var.config.global.mssql_database.default_monthly_retention, "PT0S") //P1Y, P1M, P4W, P30D etc.
+        yearly_retention               = try(local.env_config.mssql_database.default_yearly_retention, var.config.global.mssql_database.default_yearly_retention, "PT0S") //P1Y, P12M, P52W, P365D etc.
+        week_of_year                   = try(local.env_config.mssql_database.default_week_of_year, var.config.global.mssql_database.default_week_of_year, 0) // 1-52       
         user_assigned_identity         = true
         tags                           = { application = k }
       },
@@ -195,6 +199,13 @@ resource "azurerm_mssql_database" "this" {
   elastic_pool_id                = try(azurerm_mssql_elasticpool.this[local.config.databases[each.value.0].elastic_pool].id, local.config.databases[each.value.0].elastic_pool)
   zone_redundant                 = try(local.config.databases[each.value.0].instances[each.key].zone_redundant, local.config.databases[each.value.0].zone_redundant)
   tags                           = merge(local.config.tags, local.config.databases[each.value.0].tags)
+
+  long_term_retention_policy {
+    weekly_retention  = try(local.config.databases[each.value.0].instances[each.key].weekly_retention, local.config.databases[each.value.0].weekly_retention)
+    monthly_retention = try(local.config.databases[each.value.0].instances[each.key].monthly_retention, local.config.databases[each.value.0].monthly_retention)
+    yearly_retention  = try(local.config.databases[each.value.0].instances[each.key].yearly_retention, local.config.databases[each.value.0].yearly_retention)
+    week_of_year      = try(local.config.databases[each.value.0].instances[each.key].week_of_year, local.config.databases[each.value.0].week_of_year)
+  }
 }
 
 resource "azurecaf_name" "user_assigned_identity" {
