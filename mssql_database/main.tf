@@ -32,9 +32,24 @@ locals {
       try(local.env_config.mssql_database.tags, {})
     )
 
-    version                       = try(local.env_config.mssql_database.server.version, var.config.global.mssql_database.server.version, "12.0")
-    minimum_tls_version           = try(local.env_config.mssql_database.server.minimum_tls_version, var.config.global.mssql_database.server.minimum_tls_version, "Disabled")
-    public_network_access_enabled = try(local.env_config.mssql_database.server.public_network_access_enabled, var.config.global.mssql_database.server.public_network_access_enabled, false)
+    version                       = try(local.env_config.mssql_database.version, var.config.global.mssql_database.version, "12.0")
+    minimum_tls_version           = try(local.env_config.mssql_database.minimum_tls_version, var.config.global.mssql_database.minimum_tls_version, "Disabled")
+    public_network_access_enabled = try(local.env_config.mssql_database.public_network_access_enabled, var.config.global.mssql_database.public_network_access_enabled, false)
+
+    azuread_administrator = merge(
+      {
+        login_username              = null
+        object_id                   = null
+        azuread_authentication_only = true
+      },
+      try(var.config.global.mssql_database.azuread_administrator, {}),
+      try(local.env_config.mssql_database.azuread_administrator, {})
+    )
+
+    identity = {
+      type         = try(local.env_config.mssql_database.identity.type, var.config.global.mssql_database.identity.type, null)
+      identity_ids = concat(try(var.config.global.mssql_database.identity.identity_ids, []), try(local.env_config.mssql_database.identity.identity_ids, []))
+    }
 
     elastic_pools = { for k in setunion(keys(try(local.env_config.mssql_database.elastic_pools, {})), keys(try(var.config.global.mssql_database.elastic_pools, {}))) : k => merge(
       {
@@ -120,15 +135,19 @@ resource "azurerm_mssql_server" "this" {
   minimum_tls_version           = local.config.minimum_tls_version
   public_network_access_enabled = local.config.public_network_access_enabled
 
-  identity {
-    type         = "SystemAssigned"
-    identity_ids = []
+  azuread_administrator {
+    login_username              = local.config.azuread_administrator.login_username
+    object_id                   = local.config.azuread_administrator.object_id
+    azuread_authentication_only = local.config.azuread_administrator.azuread_authentication_only
   }
 
-  azuread_administrator {
-    login_username              = "SG-Azure SQL Admins"
-    object_id                   = "b74638d2-4dfd-4dbc-bbdc-02bbc3880cba"
-    azuread_authentication_only = false
+  dynamic "identity" {
+    for_each = local.config.identity.type[*]
+
+    content {
+      type         = identity.value
+      identity_ids = local.config.identity.identity_ids
+    }
   }
 }
 
