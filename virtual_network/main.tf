@@ -22,13 +22,23 @@ locals {
     address_space = try([local.env_config.virtual_network.address_space], [var.config.global.virtual_network.address_space], [])
 
     subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => {
-      subnet_size                    = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
-      service_endpoints              = concat(try(local.env_config.virtual_network.subnets[k].service_endpoints, []), try(var.config.global.virtual_network.subnets[k].service_endpoints, []))
-      service_delegation             = try(local.env_config.virtual_network.subnets[k].service_delegation, var.config.global.virtual_network.subnets[k].service_delegation, null)
-      private_connection_resource_id = try(local.env_config.virtual_network.subnets[k].private_connection_resource_id, var.config.global.virtual_network.subnets[k].private_connection_resource_id, null)
-      subresource_names              = try(local.env_config.virtual_network.subnets[k].subresource_names, var.config.global.virtual_network.subnets[k].subresource_names, null)
-      is_manual_connection           = try(local.env_config.virtual_network.subnets[k].is_manual_connection, var.config.global.virtual_network.subnets[k].is_manual_connection, false)
-      security_group_rules           = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
+      subnet_size                                   = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
+      private_endpoint_network_policies_enabled     = try(local.env_config.virtual_network.subnets[k].private_endpoint_network_policies_enabled, var.config.global.virtual_network.subnets[k].private_endpoint_network_policies_enabled, null)
+      private_link_service_network_policies_enabled = try(local.env_config.virtual_network.subnets[k].private_link_service_network_policies_enabled, var.config.global.virtual_network.subnets[k].private_link_service_network_policies_enabled, null)
+      security_group_rules                          = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
+      service_endpoints                             = concat(try(local.env_config.virtual_network.subnets[k].service_endpoints, []), try(var.config.global.virtual_network.subnets[k].service_endpoints, []))
+      service_delegation                            = try(local.env_config.virtual_network.subnets[k].service_delegation, var.config.global.virtual_network.subnets[k].service_delegation, null)
+
+      private_endpoints = concat(
+        try(local.env_config.virtual_network.subnets[k].private_endpoints, []),
+        try(var.config.global.virtual_network.subnets[k].private_endpoints, []),
+        try([{
+          name                           = k
+          private_connection_resource_id = try(local.env_config.virtual_network.subnets[k].private_connection_resource_id, var.config.global.virtual_network.subnets[k].private_connection_resource_id)
+          subresource_names              = try(local.env_config.virtual_network.subnets[k].subresource_names, var.config.global.virtual_network.subnets[k].subresource_names)
+          is_manual_connection           = try(local.env_config.virtual_network.subnets[k].is_manual_connection, var.config.global.virtual_network.subnets[k].is_manual_connection, false)
+        }], [])
+      )
     } if can(try(local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space)) }
 
     private_dns_zones = merge(
@@ -38,7 +48,6 @@ locals {
   }
 
   subresource_dns_zone_map = yamldecode(file("${path.module}/private_endpoint_dns_zones.yml"))
-  subnet_dns_zone_map      = { for k, v in local.config.subnets : k => local.subresource_dns_zone_map[v.subresource_names.0] if v.private_connection_resource_id != null }
 }
 
 resource "azurecaf_name" "virtual_network" {
@@ -77,13 +86,15 @@ resource "azurecaf_name" "subnet" {
 }
 
 resource "azurerm_subnet" "this" {
-  for_each = azurecaf_name.subnet
+  for_each = local.config.subnets
 
-  name                 = each.value.result
-  resource_group_name  = azurerm_virtual_network.this.0.resource_group_name
-  virtual_network_name = azurerm_virtual_network.this.0.name
-  address_prefixes     = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
-  service_endpoints    = local.config.subnets[each.key].service_endpoints
+  name                                          = azurecaf_name.subnet[each.key].result
+  resource_group_name                           = azurerm_virtual_network.this.0.resource_group_name
+  virtual_network_name                          = azurerm_virtual_network.this.0.name
+  address_prefixes                              = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
+  private_endpoint_network_policies_enabled     = each.value.private_endpoint_network_policies_enabled
+  private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
+  service_endpoints                             = each.value.service_endpoints
 
   dynamic "delegation" {
     for_each = local.config.subnets[each.key].service_delegation[*]
@@ -97,12 +108,17 @@ resource "azurerm_subnet" "this" {
       }
     }
   }
-
-  private_endpoint_network_policies_enabled = local.config.subnets[each.key].private_connection_resource_id == null
 }
 
 resource "azurerm_private_dns_zone" "this" {
-  for_each = setunion(keys(local.config.private_dns_zones), values(local.subnet_dns_zone_map))
+  for_each = setunion(
+    keys(local.config.private_dns_zones),
+    matchkeys(
+      values(local.subresource_dns_zone_map),
+      keys(local.subresource_dns_zone_map),
+      flatten([ for k, v in local.config.subnets : v.private_endpoints[*].subresource_names ])
+    )
+    )
 
   name                = each.key
   resource_group_name = azurerm_virtual_network.this.0.resource_group_name
@@ -121,33 +137,49 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
 }
 
 resource "azurecaf_name" "private_endpoint" {
-  for_each = { for k, v in local.config.subnets : k => v if v.private_connection_resource_id != null }
-
-  name          = reverse(split("/", each.value.private_connection_resource_id))[0]
+  for_each = merge([ for k, v in local.config.subnets : {
+    for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => regex(".+/(.+)", i.private_connection_resource_id)[0]
+  } if length(v.private_endpoints) > 0 ]...)
+  
+  name          = each.value
   resource_type = "azurerm_private_endpoint"
   suffixes      = [local.config.name]
 }
 
 resource "azurerm_private_endpoint" "this" {
-  for_each = azurecaf_name.private_endpoint
+  for_each = merge([ for k, v in local.config.subnets : {
+    for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => merge({ subnet_key = k, is_manual_connection = false }, i)
+  } if length(v.private_endpoints) > 0 ]...)
 
-  name                = each.value.result
+  name                = azurecaf_name.private_endpoint[each.key].result
   location            = azurerm_virtual_network.this.0.location
   resource_group_name = azurerm_virtual_network.this.0.resource_group_name
-  subnet_id           = azurerm_subnet.this[each.key].id
+  subnet_id           = azurerm_subnet.this[each.value.subnet_key].id
   tags                = local.config.tags
 
   private_dns_zone_group {
-    name                 = replace(azurerm_private_dns_zone.this[local.subnet_dns_zone_map[each.key]].name, ".", "-")
-    private_dns_zone_ids = [azurerm_private_dns_zone.this[local.subnet_dns_zone_map[each.key]].id]
+    name                 = try(each.value.private_dns_zone_group.name, each.value.private_dns_zone_group, "default")
+    private_dns_zone_ids = try(each.value.private_dns_zone_group.private_dns_zone_ids, compact([ for i in each.value.subresource_names : try(azurerm_private_dns_zone.this[local.subresource_dns_zone_map[i]].id, null) ]))
   }
 
   private_service_connection {
-    name                           = each.value.result
-    private_connection_resource_id = local.config.subnets[each.key].private_connection_resource_id
-    subresource_names              = local.config.subnets[each.key].subresource_names
-    is_manual_connection           = local.config.subnets[each.key].is_manual_connection
+    name                           = azurecaf_name.private_endpoint[each.key].result
+    private_connection_resource_id = each.value.private_connection_resource_id
+    subresource_names              = each.value.subresource_names
+    is_manual_connection           = each.value.is_manual_connection
   }
+
+  lifecycle {
+    replace_triggered_by = [ terraform_data.private_endpoint_replacement_trigger[each.key] ]
+  }
+}
+
+resource "terraform_data" "private_endpoint_replacement_trigger" {
+  for_each = merge([ for k, v in local.config.subnets : {
+    for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => k
+  } if length(v.private_endpoints) > 0 ]...)
+
+  input = azurerm_subnet.this[each.value].address_prefixes
 }
 
 resource "azurecaf_name" "network_security_group" {
