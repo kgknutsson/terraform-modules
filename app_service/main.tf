@@ -231,7 +231,7 @@ locals {
     local.config.app_settings
   )
 
-  database_jdbc_basestring = try(format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name), null)
+  database_jdbc_basestring = local.config.database.server_fqdn != null ? format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name) : null
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
 }
 
