@@ -89,7 +89,7 @@ resource "azurerm_subnet" "this" {
     for_each = local.config.subnets[each.key].service_delegation[*]
 
     content {
-      name = try(delegation.value.name, delegation.value)
+      name = replace(try(delegation.value.name, delegation.value), "/", ".")
 
       service_delegation {
         name    = try(delegation.value.name, delegation.value)
