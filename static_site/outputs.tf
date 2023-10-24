@@ -7,3 +7,7 @@ output "static_site_api_keys" {
   value       = { for k, v in azurerm_static_site.this : k => v.api_key }
   description = "The API key of this Static Web App."
 }
+
+output "identity_principal_ids" {
+  value = { for k, v in azurerm_static_site.this : k => v.identity.0.principal_id if length(v.identity) > 0 }
+}

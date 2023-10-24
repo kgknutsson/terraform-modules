@@ -35,6 +35,29 @@ locals {
           "Standard"
         ) //Free or Standard
 
+        identity = {
+          type = try(
+            local.env_config.static_site.sites[i].identity.type,
+            var.config.global.static_site.sites[i].identity.type,
+            local.env_config.static_site.identity.type,
+            var.config.global.static_site.identity.type,
+            null
+          )
+          identity_ids = concat(
+            try(var.config.global.static_site.sites[i].identity.identity_ids, []),
+            try(local.env_config.static_site.sites[i].identity.identity_ids, []),
+            try(var.config.global.static_site.identity.identity_ids, []),
+            try(local.env_config.static_site.identity.identity_ids, [])
+          )
+        }
+
+        app_settings = merge(
+          try(var.config.global.static_site.app_settings, {}),
+          try(local.env_config.static_site.app_settings, {}),
+          try(var.config.global.static_site.sites[i].app_settings, {}),
+          try(local.env_config.static_site.sites[i].app_settings, {})
+        )
+
         custom_domains = coalesce(
           try(
             local.env_config.static_site.sites[i].custom_domains,
@@ -74,7 +97,17 @@ resource "azurerm_static_site" "this" {
   location            = local.config.location
   sku_size            = each.value.sku_name
   sku_tier            = each.value.sku_name
+  app_settings        = each.value.app_settings
   tags                = merge(local.config.tags, each.value.tags)
+
+  dynamic "identity" {
+    for_each = each.value.identity.type[*]
+
+    content {
+      type         = each.value.identity.type
+      identity_ids = each.value.identity.identity_ids
+    }
+  }
 }
 
 resource "azurerm_static_site_custom_domain" "this" {
