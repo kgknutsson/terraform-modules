@@ -14,8 +14,8 @@ locals {
           random_length = null
           use_slug      = null
         },
-        try(lookup(var.config.global.mssql_database.naming, i), {}),
-        try(lookup(local.env_config.mssql_database.naming, i), {})
+        try(lookup(var.config.global.api_management.naming, i), {}),
+        try(lookup(local.env_config.api_management.naming, i), {})
       )
     }
 
