@@ -35,6 +35,7 @@ locals {
     sku_name        = try(local.env_config.api_management.sku_name, var.config.global.api_management.sku_name, null)
     publisher_name  = try(local.env_config.api_management.publisher_name, var.config.global.api_management.publisher_name, null)
     publisher_email = try(local.env_config.api_management.publisher_email, var.config.global.api_management.publisher_email, null)
+    min_api_version = try(local.env_config.api_management.min_api_version, var.config.global.api_management.min_api_version, "2019-12-01")
 
     apis = {
       for k in keys(merge(
@@ -149,6 +150,7 @@ resource "azurerm_api_management" "this" {
   sku_name            = local.config.sku_name
   publisher_name      = local.config.publisher_name
   publisher_email     = local.config.publisher_email
+  min_api_version     = local.config.min_api_version
 
   identity {
     type = "SystemAssigned"
