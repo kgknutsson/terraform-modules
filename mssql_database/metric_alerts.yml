@@ -12,25 +12,25 @@ mssql_elasticpool:
         threshold: 85
 mssql_database:
   - name: DTU usage above threshold - All SQL Databases
-    description: Whenever the max DTU percentage is greater than 95%
+    description: Whenever the average DTU percentage is greater than 95%
     target_resource_type: Microsoft.Sql/servers/databases
     severity: 2
-    window_size: PT15M
+    window_size: PT5M
     criteria:
       - metric_namespace: Microsoft.Sql/servers/databases
         metric_name: dtu_consumption_percent
-        aggregation: Maximum
+        aggregation: Average
         operator: GreaterThan
         threshold: 95
   - name: Data IO usage above threshold - All SQL Databases
-    description: Whenever the max data IO percentage is greater than 95%
+    description: Whenever the average data IO percentage is greater than 95%
     target_resource_type: Microsoft.Sql/servers/databases
     severity: 2
-    window_size: PT15M
+    window_size: PT5M
     criteria:
       - metric_namespace: Microsoft.Sql/servers/databases
         metric_name: physical_data_read_percent
-        aggregation: Maximum
+        aggregation: Average
         operator: GreaterThan
         threshold: 95
   - name: Data space usage above threshold - All SQL Databases
