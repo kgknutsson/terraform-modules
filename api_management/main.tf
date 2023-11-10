@@ -43,17 +43,18 @@ locals {
         try(local.env_config.api_management.apis, {})
       )) : k => merge(
         {
-          revision      = 1
-          api_type      = "http" // graphql, http, soap or websocket
-          source_api_id = null // api_resource.id or api_resource.id;rev=<revision>
-          display_name  = title(k)
-          path          = null
-          protocols     = ["https"] // http, https, ws and wss
-          import        = null
-          policy        = null
-          diagnostic    = null
-          operations    = []
-          products      = []
+          revision              = 1
+          api_type              = "http" // graphql, http, soap or websocket
+          source_api_id         = null // api_resource.id or api_resource.id;rev=<revision>
+          display_name          = title(k)
+          path                  = null
+          protocols             = ["https"] // http, https, ws and wss
+          subscription_required = null
+          import                = null
+          policy                = null
+          diagnostic            = null
+          operations            = {}
+          products              = []
         },
         try(var.config.global.api_management.apis[k], {}),
         try(local.env_config.api_management.apis[k], {})
@@ -66,7 +67,13 @@ locals {
         try(local.env_config.api_management.products, {})
       )) : k => merge(
         {
-          apis = []
+          display_name          = null
+          subscription_required = null
+          subscriptions_limit   = null
+          approval_required     = null
+          published             = true
+          terms                 = null
+          apis                  = []
         },
         try(var.config.global.api_management.products[k], {}),
         try(local.env_config.api_management.products[k], {})
@@ -83,31 +90,93 @@ locals {
           protocol    = "http" //http or soap
           url         = null
           resource_id = null
+
+          credentials = {
+            certificate = []
+            header      = {}
+            query       = {}
+          }
+
+          tls = {
+            validate_certificate_chain = false
+            validate_certificate_name  = false
+          }
         },
         try(var.config.global.api_management.backends[k], {}),
         try(local.env_config.api_management.backends[k], {})
       )
     }
 
-    loggers = {
+    users = {
       for k in keys(merge(
-        try(var.config.global.api_management.loggers, {}),
-        try(local.env_config.api_management.loggers, {})
+        try(var.config.global.api_management.users, {}),
+        try(local.env_config.api_management.users, {})
       )) : k => merge(
         {
-          resource_id          = try(var.app_service.application_insights_resource_id, null)
-          description          = null
-          buffered             = null
-          application_insights = null
+          confirmation = null
+          note         = null
+          password     = null
+          state        = null
         },
-        try(var.config.global.api_management.loggers[k], {}),
-        try(local.env_config.api_management.loggers[k], {})
+        try(var.config.global.api_management.users[k], {}),
+        try(local.env_config.api_management.users[k], {})
       )
     }
 
+    subscriptions = {
+      for k in keys(merge(
+        try(var.config.global.api_management.subscriptions, {}),
+        try(local.env_config.api_management.subscriptions, {})
+      )) : k => merge(
+        {
+          api_id          = null
+          product_id      = null
+          user_id         = null
+          primary_key     = null
+          secondary_key   = null
+          state           = null
+          subscription_id = null
+          allow_tracing   = null
+        },
+        try(var.config.global.api_management.subscriptions[k], {}),
+        try(local.env_config.api_management.subscriptions[k], {})
+      )
+    }
+
+    loggers = merge(
+      try(
+        {
+          applicationinsights = {
+            resource_id = var.app_service.application_insights_resource_id
+            description = null
+            buffered    = null
+
+            application_insights = {
+              instrumentation_key = regex("(?:InstrumentationKey=)(?P<instrumentation_key>.+?)(?:;)", var.app_service.application_insights_connection_string).instrumentation_key
+            }
+          }
+        },
+        {}
+      ),
+      {
+        for k in keys(merge(
+          try(var.config.global.api_management.loggers, {}),
+          try(local.env_config.api_management.loggers, {})
+        )) : k => merge(
+          {
+            description          = null
+            buffered             = null
+            application_insights = null
+          },
+          try(var.config.global.api_management.loggers[k], {}),
+          try(local.env_config.api_management.loggers[k], {})
+        )
+      }
+    )
+
     diagnostic = merge(
       {
-        logger_id                 = null
+        logger_id                 = try(var.app_service.application_insights_resource_id, null) != null ? "applicationinsights" : null
         identifier                = "applicationinsights"
         always_log_errors         = null
         http_correlation_protocol = null
@@ -124,16 +193,11 @@ locals {
       try(var.config.global.api_management.diagnostic, {})
     )
   }
-
-  default_api_operations = [
-    for i in ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"] : {
-      method       = i
-      url_template = "/*"
-    }
-  ]
 }
 
 resource "azurecaf_name" "api_management" {
+  count = length(local.config.sku_name[*])
+
   name           = local.config.naming["azurerm_api_management"].name
   resource_type  = "azurerm_api_management"
   prefixes       = local.config.naming["azurerm_api_management"].prefixes
@@ -143,7 +207,9 @@ resource "azurecaf_name" "api_management" {
 }
 
 resource "azurerm_api_management" "this" {
-  name                = azurecaf_name.api_management.result
+  count = length(local.config.sku_name[*])
+
+  name                = azurecaf_name.api_management[0].result
   resource_group_name = local.config.resource_group_name
   location            = local.config.location
   tags                = local.config.tags
@@ -160,15 +226,16 @@ resource "azurerm_api_management" "this" {
 resource "azurerm_api_management_api" "this" {
   for_each = local.config.apis
 
-  api_management_name = azurerm_api_management.this.name
-  resource_group_name = local.config.resource_group_name
-  name                = each.key
-  revision            = each.value.revision
-  api_type            = each.value.api_type
-  source_api_id       = each.value.source_api_id
-  display_name        = each.value.display_name
-  path                = each.value.path
-  protocols           = each.value.protocols
+  api_management_name   = azurerm_api_management.this[0].name
+  resource_group_name   = local.config.resource_group_name
+  name                  = each.key
+  revision              = each.value.revision
+  api_type              = each.value.api_type
+  source_api_id         = each.value.source_api_id
+  display_name          = each.value.display_name
+  path                  = each.value.path
+  protocols             = each.value.protocols
+  subscription_required = each.value.subscription_required
 
   dynamic "import" {
     for_each = each.value.import[*]
@@ -210,7 +277,7 @@ resource "azurerm_api_management_api_diagnostic" "this" {
   }
   
   api_name                  = azurerm_api_management_api.this[each.key].name
-  api_management_name       = azurerm_api_management.this.name
+  api_management_name       = azurerm_api_management.this[0].name
   api_management_logger_id  = try(azurerm_api_management_logger.this[each.value.logger_id].id, each.value.logger_id)
   resource_group_name       = local.config.resource_group_name
   identifier                = each.value.identifier
@@ -357,30 +424,74 @@ resource "azurerm_api_management_api_diagnostic" "this" {
 resource "azurerm_api_management_api_operation" "this" {
   for_each = merge([
     for k, v in local.config.apis : {
-      for o in coalescelist(
-        v.operations,
-        local.default_api_operations
-      ) : join("_", [k, coalesce(try(o.operation_id, null), o.method)]) => merge({ api_name = k }, o)
+      for i in coalescelist(
+        keys(v.operations),
+        ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
+      ) : join("_", [k, i]) => merge(
+        {
+          api_name     = k
+          operation_id = i
+          display_name = i
+          url_template = "/*"
+        },
+        try(
+          v.operations[i],
+          {
+            method = i
+          }
+        )
+      )
     } if v.import == null
-  ]...) 
+  ]...)
 
-  api_management_name = azurerm_api_management.this.name
+  api_management_name = azurerm_api_management.this[0].name
   resource_group_name = local.config.resource_group_name
   api_name            = each.value.api_name
-  operation_id        = try(each.value.operation_id, each.key)
-  display_name        = try(each.value.display_name, each.key)
+  operation_id        = each.value.operation_id
+  display_name        = each.value.display_name
   method              = each.value.method
-  url_template        = try(each.value.url_template, "/*")
+  url_template        = each.value.url_template
+
+  depends_on = [ azurerm_api_management_api.this ]
+}
+
+resource "azurerm_api_management_api_operation_policy" "this" {
+  for_each = { for k, v in azurerm_api_management_api_operation.this : k => merge(v, local.config.apis[v.api_name].operations[v.operation_id].policy ) if can(local.config.apis[v.api_name].operations[v.operation_id].policy) }
+
+  api_management_name = azurerm_api_management.this[0].name
+  resource_group_name = local.config.resource_group_name
+  api_name            = each.value.api_name
+  operation_id        = each.value.operation_id
+  xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
+  xml_link            = try(each.value.xml_link, null)
+
+  depends_on = [ azurerm_api_management_api_operation.this ]
 }
 
 resource "azurerm_api_management_api_policy" "this" {
   for_each = { for k, v in local.config.apis : k => v.policy if v.policy != null }
 
-  api_management_name = azurerm_api_management.this.name
+  api_management_name = azurerm_api_management.this[0].name
   resource_group_name = local.config.resource_group_name
   api_name            = each.key
   xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
   xml_link            = try(each.value.xml_link, null)
+
+  depends_on = [ azurerm_api_management_api.this, azurerm_api_management_backend.this ]
+}
+
+resource "azurerm_api_management_product" "this" {
+  for_each = local.config.products
+
+  api_management_name   = azurerm_api_management.this[0].name
+  resource_group_name   = local.config.resource_group_name
+  product_id            = each.key
+  display_name          = coalesce(each.value.display_name, each.key)
+  subscription_required = each.value.subscription_required
+  subscriptions_limit   = each.value.subscriptions_limit
+  approval_required     = each.value.approval_required
+  published             = each.value.published
+  terms                 = each.value.terms
 }
 
 resource "azurerm_api_management_product_api" "this" {
@@ -403,28 +514,80 @@ resource "azurerm_api_management_product_api" "this" {
     ]
   )...)
 
-  api_management_name = azurerm_api_management.this.name
+  api_management_name = azurerm_api_management.this[0].name
   resource_group_name = local.config.resource_group_name
   product_id          = each.value.product_id
   api_name            = each.value.api_name
+
+  depends_on = [ azurerm_api_management_product.this ]
 }
 
 resource "azurerm_api_management_backend" "this" {
   for_each = local.config.backends
 
-  api_management_name = azurerm_api_management.this.name
+  api_management_name = azurerm_api_management.this[0].name
   resource_group_name = local.config.resource_group_name
   name                = each.key
   description         = try(coalesce(each.value.description, split("/", each.value.resource_id)[8]), null)
   protocol            = each.value.protocol
   url                 = coalesce(each.value.url, format("https://%s.azurewebsites.net", split("/", each.value.resource_id)[8]))
   resource_id         = try("https://management.azure.com${each.value.resource_id}", null)
+
+  dynamic "credentials" {
+    for_each = each.value.credentials[*]
+
+    content {
+      certificate = credentials.value.certificate
+      header      = credentials.value.header
+      query       = credentials.value.query
+    }
+  }
+
+  dynamic "tls" {
+    for_each = each.value.tls[*]
+
+    content {
+      validate_certificate_chain = tls.value.validate_certificate_chain
+      validate_certificate_name  = tls.value.validate_certificate_name
+    }
+  }
+}
+
+resource "azurerm_api_management_user" "this" {
+  for_each = local.config.users
+
+  api_management_name = azurerm_api_management.this[0].name
+  resource_group_name = local.config.resource_group_name
+  user_id             = each.key
+  email               = each.value.email
+  first_name          = each.value.first_name
+  last_name           = each.value.last_name
+  confirmation        = each.value.confirmation
+  note                = each.value.note
+  password            = each.value.password
+  state               = each.value.state
+}
+
+resource "azurerm_api_management_subscription" "this" {
+  for_each = local.config.subscriptions
+
+  api_management_name = azurerm_api_management.this[0].name
+  resource_group_name = local.config.resource_group_name
+  display_name        = each.key
+  api_id              = try(azurerm_api_management_api.this, each.value.api_id)
+  product_id          = try(azurerm_api_management_product_api.this, each.value.product_id)
+  user_id             = each.value.user_id
+  primary_key         = each.value.primary_key
+  secondary_key       = each.value.secondary_key
+  state               = each.value.state
+  subscription_id     = each.value.subscription_id
+  allow_tracing       = each.value.allow_tracing
 }
 
 resource "azurerm_api_management_logger" "this" {
   for_each = local.config.loggers
 
-  api_management_name = azurerm_api_management.this.name
+  api_management_name = azurerm_api_management.this[0].name
   resource_group_name = local.config.resource_group_name
   name                = each.key
   description         = each.value.description
@@ -435,19 +598,16 @@ resource "azurerm_api_management_logger" "this" {
     for_each = each.value.application_insights[*]
 
     content {
-      instrumentation_key = try(
-        application_insights.value.instrumentation_key,
-        regex("(?:InstrumentationKey=)(?P<instrumentation_key>.+?)(?:;)", var.app_service.application_insights_connection_string).instrumentation_key
-      )
+      instrumentation_key = application_insights.value.instrumentation_key
     }
   }
 }
 
 resource "azurerm_api_management_diagnostic" "this" {
-  count = local.config.diagnostic.logger_id != null ? 1 : 0
+  for_each = { for k, v in azurerm_api_management_logger.this : k => v.id if k == local.config.diagnostic.logger_id }
 
-  api_management_name       = azurerm_api_management.this.name
-  api_management_logger_id  = try(azurerm_api_management_logger.this[local.config.diagnostic.logger_id].id, local.config.diagnostic.logger_id)
+  api_management_name       = azurerm_api_management.this[0].name
+  api_management_logger_id  = each.value
   resource_group_name       = local.config.resource_group_name
   identifier                = local.config.diagnostic.identifier
   always_log_errors         = local.config.diagnostic.always_log_errors
@@ -587,5 +747,9 @@ resource "azurerm_api_management_diagnostic" "this" {
         }
       }
     }
+  }
+
+  lifecycle {
+    replace_triggered_by = [ azurerm_api_management_logger.this[each.key] ]
   }
 }
