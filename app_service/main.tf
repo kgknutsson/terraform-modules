@@ -473,9 +473,11 @@ resource "azurerm_linux_web_app" "this" {
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
       sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_CLIENTID"],
       sticky_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -638,6 +640,7 @@ resource "azurerm_linux_web_app_slot" "this" {
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -814,9 +817,11 @@ resource "azurerm_windows_web_app" "this" {
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
       sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      sticky_settings["AZURE_KEYVAULT_CLIENTID"],
       sticky_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -987,6 +992,7 @@ resource "azurerm_windows_web_app_slot" "this" {
       logs,
       app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
