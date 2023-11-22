@@ -997,6 +997,9 @@ resource "azurerm_windows_web_app_slot" "this" {
   }
 }
 
+data "azurerm_client_config" "this" {
+}
+
 resource "azurerm_app_service_connection" "this" {
   for_each = local.config.service_connections
 
@@ -1009,7 +1012,7 @@ resource "azurerm_app_service_connection" "this" {
   authentication {
     type            = try(each.value.authentication.type, "systemAssignedIdentity")
     client_id       = try(each.value.authentication.client_id, null)
-    subscription_id = try(each.value.authentication.subscription_id, null)
+    subscription_id = try(each.value.authentication.client_id, null) != null ? try(each.value.authentication.subscription_id, data.azurerm_client_config.this.subscription_id) : null
   }
 }
 
