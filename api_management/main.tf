@@ -72,6 +72,7 @@ locals {
           subscriptions_limit   = null
           approval_required     = null
           published             = true
+          policy                = null
           terms                 = null
           apis                  = []
         },
@@ -90,12 +91,7 @@ locals {
           protocol    = "http" //http or soap
           url         = null
           resource_id = null
-
-          credentials = {
-            certificate = []
-            header      = {}
-            query       = {}
-          }
+          credentials = null
 
           tls = {
             validate_certificate_chain = false
@@ -146,7 +142,7 @@ locals {
     loggers = merge(
       try(
         {
-          applicationinsights = {
+          split("/", var.app_service.application_insights_resource_id)[8] = {
             resource_id = var.app_service.application_insights_resource_id
             description = null
             buffered    = null
@@ -176,8 +172,8 @@ locals {
 
     diagnostic = merge(
       {
-        logger_id                 = try(var.app_service.application_insights_resource_id, null) != null ? "applicationinsights" : null
-        identifier                = "applicationinsights"
+        logger_id                 = try(split("/", var.app_service.application_insights_resource_id)[8], null)
+        identifier                = "applicationinsights" // applicationinsights or azuremonitor
         always_log_errors         = null
         http_correlation_protocol = null
         log_client_ip             = null
@@ -429,10 +425,11 @@ resource "azurerm_api_management_api_operation" "this" {
         ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
       ) : join("_", [k, i]) => merge(
         {
-          api_name     = k
-          operation_id = i
-          display_name = i
-          url_template = "/*"
+          api_name            = k
+          operation_id        = i
+          display_name        = join("_", [k, i])
+          url_template        = "/*"
+          template_parameters = {}
         },
         try(
           v.operations[i],
@@ -451,6 +448,16 @@ resource "azurerm_api_management_api_operation" "this" {
   display_name        = each.value.display_name
   method              = each.value.method
   url_template        = each.value.url_template
+
+  dynamic "template_parameter" {
+    for_each = each.value.template_parameters
+
+    content {
+      name     = template_parameter.key
+      required = template_parameter.value.required
+      type     = template_parameter.value.type
+    }
+  }
 
   depends_on = [ azurerm_api_management_api.this ]
 }
@@ -522,6 +529,16 @@ resource "azurerm_api_management_product_api" "this" {
   depends_on = [ azurerm_api_management_product.this ]
 }
 
+resource "azurerm_api_management_product_policy" "this" {
+  for_each = { for k, v in local.config.products : k => v.policy if v.policy != null }
+
+  api_management_name = azurerm_api_management.this[0].name
+  resource_group_name = local.config.resource_group_name
+  product_id          = each.key
+  xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
+  xml_link            = try(each.value.xml_link, null)
+}
+
 resource "azurerm_api_management_backend" "this" {
   for_each = local.config.backends
 
@@ -534,12 +551,35 @@ resource "azurerm_api_management_backend" "this" {
   resource_id         = try("https://management.azure.com${each.value.resource_id}", null)
 
   dynamic "credentials" {
-    for_each = each.value.credentials[*]
+    for_each = [ for i in each.value.credentials[*] : merge(
+      {
+        authorization = null
+        certificate   = null
+        header        = null
+        query         = null
+      },
+      i
+    ) ]
 
     content {
       certificate = credentials.value.certificate
       header      = credentials.value.header
       query       = credentials.value.query
+
+      dynamic "authorization" {
+        for_each = [ for i in credentials.value.authorization[*] : merge(
+          {
+            parameter = null
+            scheme    = null
+          },
+          i
+        ) ]
+
+        content {
+          parameter = authorization.value.parameter
+          scheme    = authorization.value.scheme
+        }
+      }
     }
   }
 
