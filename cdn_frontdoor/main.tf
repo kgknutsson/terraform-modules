@@ -10,7 +10,6 @@ locals {
       for i in [
         "azurerm_cdn_frontdoor_profile",
         "azurerm_cdn_frontdoor_secret",
-        "azurerm_cdn_frontdoor_custom_domain",
         "azurerm_cdn_frontdoor_endpoint",
         "azurerm_cdn_frontdoor_firewall_policy",
         "azurerm_cdn_frontdoor_security_policy",
@@ -59,11 +58,11 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.custom_domains), []),
         try(keys(var.config.global.cdn_frontdoor.custom_domains), []),
-        flatten([ for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : [ for i in v.custom_domains : replace(i, ".", "-") ] if can(v.custom_domains) ]),
-        flatten([ for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : [ for i in v.custom_domains : replace(i, ".", "-") ] if can(v.custom_domains) ])
+        flatten([ for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : try([ for i in v.custom_domains : replace(i, ".", "-") ], []) ]),
+        flatten([ for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : try([ for i in v.custom_domains : replace(i, ".", "-") ], []) ])
       ) : k => merge(
         {
-          host_name = k
+          host_name = replace(k, "-", ".")
         },
         try(local.env_config.cdn_frontdoor.custom_domains[k], {}),
         try(var.config.global.cdn_frontdoor.custom_domains[k], {}),
@@ -302,21 +301,10 @@ resource "azurerm_cdn_frontdoor_secret" "this" {
   }
 }
 
-resource "azurecaf_name" "cdn_frontdoor_custom_domain" {
-  for_each = { for k, v in local.config.custom_domains : k => v if length(local.config.sku_name[*]) > 0 }
-
-  resource_type = "azurerm_cdn_frontdoor_custom_domain"
-  name          = local.config.naming["azurerm_cdn_frontdoor_custom_domain"].name
-  prefixes      = local.config.naming["azurerm_cdn_frontdoor_custom_domain"].prefixes
-  suffixes      = concat(local.config.naming["azurerm_cdn_frontdoor_custom_domain"].suffixes, [each.key])
-  random_length = local.config.naming["azurerm_cdn_frontdoor_custom_domain"].random_length
-  use_slug      = local.config.naming["azurerm_cdn_frontdoor_custom_domain"].use_slug
-}
-
 resource "azurerm_cdn_frontdoor_custom_domain" "this" {
   for_each = { for k, v in local.config.custom_domains : k => v if length(local.config.sku_name[*]) > 0 }
 
-  name                     = azurecaf_name.cdn_frontdoor_custom_domain[each.key].result
+  name                     = each.key
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.this[0].id
   host_name                = each.value.host_name
 
@@ -458,7 +446,7 @@ resource "azurerm_cdn_frontdoor_route" "this" {
   cdn_frontdoor_origin_group_id   = replace(azurerm_cdn_frontdoor_origin_group.this[each.value.origin_group].id, "resourcegroups", "resourceGroups")
   cdn_frontdoor_origin_ids        = [ for k, v in azurerm_cdn_frontdoor_origin.this : v.id if contains(each.value.origins, k) ]
   cdn_frontdoor_rule_set_ids      = [ for k, v in azurerm_cdn_frontdoor_rule_set.this : v.id if contains(each.value.rule_sets, k) ]
-  cdn_frontdoor_custom_domain_ids = [ for k, v in azurerm_cdn_frontdoor_custom_domain.this : v.id if contains(each.value.custom_domains, k) ]
+  cdn_frontdoor_custom_domain_ids = [ for k, v in azurerm_cdn_frontdoor_custom_domain.this : v.id if contains(each.value.custom_domains, k) || contains(each.value.custom_domains, v.host_name) ]
   cdn_frontdoor_origin_path       = each.value.origin_path
   enabled                         = each.value.enabled
   forwarding_protocol             = each.value.forwarding_protocol
