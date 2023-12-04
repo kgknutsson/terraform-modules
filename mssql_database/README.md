@@ -53,6 +53,10 @@ global:
         sku_name: <string>
         elastic_pool: <string>
         zone_redundant: <bool>
+        weekly_retention: <string>
+        monthly_retention: <string>
+        yearly_retention: <string>
+        week_of_year: <string>
         user_assigned_identity: <bool>
         tags:
           <string>: <string>
@@ -69,6 +73,10 @@ global:
             sku_name: <string>
             elastic_pool: <string>
             zone_redundant: <bool>
+            weekly_retention: <string>
+            monthly_retention: <string>
+            yearly_retention: <string>
+            week_of_year: <string>
             user_assigned_identity: <bool>
             tags:
               <string>: <string>
