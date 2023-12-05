@@ -526,7 +526,7 @@ resource "azurerm_api_management_product_api" "this" {
   product_id          = each.value.product_id
   api_name            = each.value.api_name
 
-  depends_on = [ azurerm_api_management_product.this ]
+  depends_on = [ azurerm_api_management_api.this, azurerm_api_management_product.this ]
 }
 
 resource "azurerm_api_management_product_policy" "this" {
