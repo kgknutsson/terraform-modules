@@ -1071,7 +1071,7 @@ resource "azurerm_linux_function_app" "this" {
     application_insights_connection_string        = local.appinsights_connection_string
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker.0.image_name, i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
         dynamic "docker" {
@@ -1198,7 +1198,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker.0.image_name, i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
         dynamic "docker" {
