@@ -197,23 +197,10 @@ locals {
           patterns_to_match      = ["/*"]
           supported_protocols    = ["Http", "Https"]
           link_to_default_domain = true
-
-
+          cache                  = null
         },
         try(local.env_config.cdn_frontdoor.routes[k], {}),
-        try(var.config.global.cdn_frontdoor.routes[k], {}),
-        {
-          cache = merge(
-            {
-              compression_enabled           = false
-              content_types_to_compress     = yamldecode(file("${path.module}/default_content_types_to_compress.yml"))
-              query_string_caching_behavior = "UseQueryString"
-              query_strings                 = []
-            },
-            try(local.env_config.cdn_frontdoor.routes[k].cache, {}),
-            try(var.config.global.cdn_frontdoor.routes[k].cache, {}),
-          )
-        }
+        try(var.config.global.cdn_frontdoor.routes[k], {})
       )
     }
 
@@ -455,11 +442,25 @@ resource "azurerm_cdn_frontdoor_route" "this" {
   supported_protocols             = each.value.supported_protocols
   link_to_default_domain          = each.value.link_to_default_domain
 
-  cache {
-    compression_enabled           = each.value.cache.compression_enabled
-    content_types_to_compress     = each.value.cache.content_types_to_compress
-    query_string_caching_behavior = each.value.cache.query_string_caching_behavior
-    query_strings                 = each.value.cache.query_strings
+  dynamic "cache" {
+    for_each = [
+      for i in each.value.cache[*] : merge(
+        {
+          compression_enabled           = false
+          content_types_to_compress     = yamldecode(file("${path.module}/default_content_types_to_compress.yml"))
+          query_string_caching_behavior = "UseQueryString"
+          query_strings                 = []
+        },
+        i
+      )
+    ]
+
+    content {
+      compression_enabled           = cache.value.compression_enabled
+      content_types_to_compress     = cache.value.content_types_to_compress
+      query_string_caching_behavior = cache.value.query_string_caching_behavior
+      query_strings                 = cache.value.query_strings
+    }
   }
 }
 
