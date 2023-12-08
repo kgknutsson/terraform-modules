@@ -1,5 +1,6 @@
 blob: privatelink.blob.core.windows.net
 file: privatelink.file.core.windows.net
 mysqlServer: privatelink.mysql.database.azure.com
+namespace: privatelink.servicebus.windows.net
 sqlServer: privatelink.database.windows.net
 vault: privatelink.vaultcore.azure.net
