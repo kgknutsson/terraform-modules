@@ -89,27 +89,51 @@ locals {
     ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
       {
         action                    = null
-        headers                   = null
         name                      = null
         priority                  = (i + 1) * 100
         ip_address                = null
         service_tag               = null
         virtual_network_subnet_id = null
       },
-      v
+      v,
+      {
+        headers = try(v.headers, null) != null ? [
+          merge(
+            {
+              x_azure_fdid      = []
+              x_fd_health_probe = []
+              x_forwarded_for   = []
+              x_forwarded_host  = []
+            },
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
+          )
+        ] : null
+      }
     ) ]
 
     scm_ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
       {
         action                    = null
-        headers                   = null
         name                      = null
         priority                  = (i + 1) * 100
         ip_address                = null
         service_tag               = null
         virtual_network_subnet_id = null
       },
-      v
+      v,
+      {
+        headers = try(v.headers, null) != null ? [
+          merge(
+            {
+              x_azure_fdid      = []
+              x_fd_health_probe = []
+              x_forwarded_for   = []
+              x_forwarded_host  = []
+            },
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
+          )
+        ] : null
+      }
     ) ]
 
     service_connections = {
