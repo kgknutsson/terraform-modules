@@ -87,11 +87,16 @@ resource "azurerm_storage_account" "this" {
     for_each = local.config.network_rules[*]
 
     content {
-      default_action = "Deny"
-      bypass = network_rules.value.bypass
-      ip_rules = network_rules.value.ip_rules
+      default_action             = "Deny"
+      bypass                     = network_rules.value.bypass
+      ip_rules                   = network_rules.value.ip_rules
       virtual_network_subnet_ids = network_rules.value.virtual_network_subnet_ids
     }
+  }
+
+  lifecycle {
+    # Defender for Cloud adds a rule for storageDataScanner that Terraform detects as drift without this.
+    ignore_changes = [ network_rules[0].private_link_access ]
   }
 }
 
