@@ -112,10 +112,22 @@ locals {
       v
     ) ]
 
-    service_connections = merge(
-      try(var.config.global.app_service.service_connections, {}),
-      try(local.env_config.app_service.service_connections, {})
-    )
+    service_connections = {
+      for k in setunion(
+        try(keys(var.config.global.app_service.service_connections), []),
+        try(keys(local.env_config.app_service.service_connections), [])
+      ) : k => merge(
+        {
+          authentication = {
+            type            = "systemAssignedIdentity" // systemAssignedIdentity or userAssignedIdentity
+            client_id       = null
+            subscription_id = null
+          }
+        },
+        try(var.config.global.app_service.service_connections[k], {}),
+        try(local.env_config.app_service.service_connections[k], {})
+      )
+    }
 
     site_config = merge(
       {
@@ -1012,18 +1024,28 @@ data "azurerm_client_config" "this" {
 }
 
 resource "azurerm_app_service_connection" "this" {
-  for_each = local.config.service_connections
+  for_each = merge(
+    {
+      for k, v in local.config.service_connections : k => merge(
+        {
+          name           = k
+          app_service_id = try(azurerm_linux_web_app.this.0, azurerm_windows_web_app.this.0).id
+        },
+        v
+      ) if local.config.type == "WebApp"
+    }
+  )
 
-  name               = each.key
-  app_service_id     = try(azurerm_linux_web_app.this.0, azurerm_windows_web_app.this.0).id
+  name               = each.value.name
+  app_service_id     = each.value.app_service_id
   target_resource_id = each.value.target_resource_id
   client_type        = each.value.client_type
   vnet_solution      = each.value.vnet_solution
 
   authentication {
-    type            = try(each.value.authentication.type, "systemAssignedIdentity")
-    client_id       = try(each.value.authentication.client_id, null)
-    subscription_id = try(each.value.authentication.client_id, null) != null ? try(each.value.authentication.subscription_id, data.azurerm_client_config.this.subscription_id) : null
+    type            = each.value.authentication.type
+    client_id       = each.value.authentication.client_id
+    subscription_id = each.value.authentication.client_id != null ? coalesce(each.value.authentication.subscription_id, data.azurerm_client_config.this.subscription_id) : null
   }
 }
 
@@ -1494,5 +1516,31 @@ resource "azurerm_windows_function_app_slot" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+  }
+}
+
+resource "azurerm_function_app_connection" "this" {
+  for_each = merge(
+    {
+      for k, v in local.config.service_connections : k => merge(
+        {
+          name            = k
+          function_app_id = try(azurerm_linux_function_app.this.0, azurerm_windows_function_app.this.0).id
+        },
+        v
+      ) if local.config.type == "FunctionApp"
+    }
+  )
+
+  name               = each.value.name
+  function_app_id    = each.value.function_app_id
+  target_resource_id = each.value.target_resource_id
+  client_type        = each.value.client_type
+  vnet_solution      = each.value.vnet_solution
+
+  authentication {
+    type            = each.value.authentication.type
+    client_id       = each.value.authentication.client_id
+    subscription_id = each.value.authentication.client_id != null ? coalesce(each.value.authentication.subscription_id, data.azurerm_client_config.this.subscription_id) : null
   }
 }
