@@ -58,11 +58,13 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.custom_domains), []),
         try(keys(var.config.global.cdn_frontdoor.custom_domains), []),
-        flatten([ for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : try([ for i in v.custom_domains : replace(i, ".", "-") ], []) ]),
-        flatten([ for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : try([ for i in v.custom_domains : replace(i, ".", "-") ], []) ])
-      ) : k => merge(
+        try(keys(local.env_config.cdn_frontdoor.rule_sets["redirects"]), []),
+        try(keys(var.config.global.cdn_frontdoor.rule_sets["redirects"]), []),
+        flatten([ for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : try(v.custom_domains, []) ]),
+        flatten([ for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : try(v.custom_domains, []) ])
+      ) : replace(k, ".", "-") => merge(
         {
-          host_name = replace(k, "-", ".")
+          host_name = try(local.env_config.cdn_frontdoor.custom_domains[k], var.config.global.cdn_frontdoor.custom_domains[k], null) == null ? k : replace(k, "-", ".")
         },
         try(local.env_config.cdn_frontdoor.custom_domains[k], {}),
         try(var.config.global.cdn_frontdoor.custom_domains[k], {}),
@@ -143,40 +145,42 @@ locals {
       )
     }
 
-    rule_sets = [
-      for i in setunion(
-        [ for k, v in try(local.env_config.cdn_frontdoor.rules, {}) : v.rule_set ],
-        [ for k, v in try(var.config.global.cdn_frontdoor.rules, {}) : v.rule_set ]
-      ) : i
-    ]
-
-    rules = {
-      for i, k in compact(concat(
-        ["rule0"], #TODO: Add unconditional rule 0
-        try(keys(local.env_config.cdn_frontdoor.rules), []),
-        try(keys(var.config.global.cdn_frontdoor.rules), [])
-      )) : k => merge(
+    rule_sets = {
+      for k in setunion(
+        try(keys(local.env_config.cdn_frontdoor.rule_sets), []),
+        try(keys(var.config.global.cdn_frontdoor.rule_sets), [])
+      ) : k => merge(
         {
-          rule_set   = null
-          conditions = null
+          for x, y in merge(
+            try(local.env_config.cdn_frontdoor.rule_sets[k], {}),
+            try(var.config.global.cdn_frontdoor.rule_sets[k], {})
+          ) : x => y if k != "redirects"
         },
-        try(local.env_config.cdn_frontdoor.rules[k], {}),
-        try(var.config.global.cdn_frontdoor.rules[k], {}),
         {
-          order   = i
-          actions = merge(
-            {
-              url_rewrite_action                  = null
-              url_redirect_action                 = null
-              route_configuration_override_action = null
-              request_header_action               = null
-              response_header_action              = null
-            },
-            try(local.env_config.cdn_frontdoor.rules[k].actions, {}),
-            try(var.config.global.cdn_frontdoor.rules[k].actions, {}),
-          )
+          for x, y in {
+            for n, m in merge(
+              try(local.env_config.cdn_frontdoor.rule_sets[k], {}),
+              try(var.config.global.cdn_frontdoor.rule_sets[k], {})
+            ) : n => regex("^(?P<redirect_protocol>[^:/?#]+)://(?P<destination_hostname>[^/?#]*)(?P<destination_path>[^?#]*)?[?]?(?P<query_string>[^#]*)?#?(?P<destination_fragment>.*)?", m) if k == "redirects"
+          } : replace(x, ".", "-") => {
+            actions = {
+              url_redirect_action = {
+                redirect_type        = "Moved"
+                redirect_protocol    = title(y.redirect_protocol)
+                destination_hostname = y.destination_hostname
+                destination_path     = trimsuffix(y.destination_path, "/") == "" ? null : y.destination_path
+                query_string         = y.query_string == "" ? null : y.query_string
+                destination_fragment = y.destination_fragment == "" ? null : y.destination_fragment
+              }
+            }
+            conditions = {
+              host_name_condition = {
+                match_values = [x]
+              }
+            }
+          }
         }
-      ) if i != 0 #TODO: Add condition for when rule 0 should be included
+      )
     }
 
     routes = {
@@ -374,28 +378,54 @@ resource "azurerm_cdn_frontdoor_origin" "this" {
 }
 
 resource "azurerm_cdn_frontdoor_rule_set" "this" {
-  for_each = toset([ for i in local.config.rule_sets : i if length(local.config.sku_name[*]) > 0 ])
+  for_each = toset([ for k, v in local.config.rule_sets : k if length(local.config.sku_name[*]) > 0 ])
 
   name                     = each.key
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.this[0].id
 }
 
 resource "azurerm_cdn_frontdoor_rule" "this" {
-  for_each = { for k, v in local.config.rules : k => v if length(local.config.sku_name[*]) > 0 }
+  for_each = merge([
+    for k, v in local.config.rule_sets : {
+      for x, y in v : x => merge(
+        {
+          order             = try(y.conditions, null) == null ? 0 : index(keys(v), x) + 1
+          rule_set          = k
+          conditions        = null
+          behavior_on_match = null
+        },
+        y,
+        {
+          actions = merge(
+            {
+              url_rewrite_action                  = null
+              url_redirect_action                 = null
+              route_configuration_override_action = null
+              request_header_action               = null
+              response_header_action              = null
+            },
+            try(y.actions, {})
+          )
+        }
+      )
+    } if length(local.config.sku_name[*]) > 0
+  ]...)
 
-  name                      = each.key
+  name                      = replace(each.key, "-", "")
   cdn_frontdoor_rule_set_id = azurerm_cdn_frontdoor_rule_set.this[each.value.rule_set].id
   order                     = each.value.order
+  behavior_on_match         = each.value.behavior_on_match
 
   actions {
     dynamic "url_redirect_action" {
       for_each = each.value.actions.url_redirect_action[*]
 
       content {
-        destination_hostname = url_redirect_action.value.destination_hostname
+        destination_hostname = try(url_redirect_action.value.destination_hostname, "")
         destination_path     = try(url_redirect_action.value.destination_path, null)
+        query_string         = try(url_redirect_action.value.query_string, null)
         destination_fragment = try(url_redirect_action.value.destination_fragment, null)
-        redirect_type        = try(url_redirect_action.value.redirect_type, "TemporaryRedirect")
+        redirect_type        = try(url_redirect_action.value.redirect_type, "Moved")
         redirect_protocol    = try(url_redirect_action.value.redirect_protocol, "Https")
       }
     }
@@ -411,10 +441,21 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
         for_each = try(conditions.value.host_name_condition[*], {})
 
         content {
-          operator         = host_name_condition.value.operator
+          operator         = try(host_name_condition.value.operator, "Equal")
           match_values     = try(host_name_condition.value.match_values, [])
           transforms       = try(host_name_condition.value.transforms, null)
           negate_condition = try(host_name_condition.value.negate_condition, null)
+        }
+      }
+
+      dynamic "request_uri_condition" {
+        for_each = try(conditions.value.request_uri_condition[*], {})
+
+        content {
+          operator         = try(request_uri_condition.value.operator, "Equal")
+          match_values     = try(request_uri_condition.value.match_values, [])
+          transforms       = try(request_uri_condition.value.transforms, null)
+          negate_condition = try(request_uri_condition.value.negate_condition, null)
         }
       }
 
@@ -465,9 +506,9 @@ resource "azurerm_cdn_frontdoor_route" "this" {
 }
 
 resource "azurerm_cdn_frontdoor_custom_domain_association" "this" {
-  for_each = transpose({ for k, v in local.config.routes : k => v.custom_domains if length(local.config.sku_name[*]) > 0 })
+  for_each = transpose({ for k, v in local.config.routes : k => [ for i in v.custom_domains : replace(i, ".", "-") ] if length(local.config.sku_name[*]) > 0 })
 
-  cdn_frontdoor_custom_domain_id = azurerm_cdn_frontdoor_custom_domain.this[replace(each.key, ".", "-")].id
+  cdn_frontdoor_custom_domain_id = azurerm_cdn_frontdoor_custom_domain.this[each.key].id
   cdn_frontdoor_route_ids        = [ for i in each.value : azurerm_cdn_frontdoor_route.this[i].id ]
 }
 
