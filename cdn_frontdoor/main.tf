@@ -571,7 +571,7 @@ resource "azurerm_cdn_frontdoor_security_policy" "this" {
           for_each = each.value.domains
 
           content {
-            cdn_frontdoor_domain_id = domain.value != null ? try(azurerm_cdn_frontdoor_endpoint.this[domain.value].id, azurerm_cdn_frontdoor_custom_domain.this[domain.value].id) : null
+            cdn_frontdoor_domain_id = domain.value != null ? try(azurerm_cdn_frontdoor_endpoint.this[domain.value].id, azurerm_cdn_frontdoor_custom_domain.this[replace(domain.value, ".", "-")].id) : null
           }
         }
       }
