@@ -20,9 +20,16 @@ locals {
     )
 
     naming = {
-      for i in [ "azurerm_virtual_wan", "azurerm_virtual_hub", "azurerm_vpn_gateway", "azurerm_vpn_site" ] : i => merge(
+      for i in [
+        "azurerm_virtual_wan",
+        "azurerm_virtual_hub",
+        "azurerm_virtual_hub_connection",
+        "azurerm_vpn_site",
+        "azurerm_vpn_gateway",
+        "azurerm_vpn_gateway_connection",
+      ] : i => merge(
         {
-          name          = var.config.global.name
+          name          = null
           suffixes      = compact([var.environment])
           random_length = null
         },
@@ -40,7 +47,7 @@ resource "azurecaf_name" "virtual_wan" {
   count = length(local.config.type[*])
 
   resource_type = "azurerm_virtual_wan"
-  name          = local.config.naming["azurerm_virtual_wan"].name
+  name          = coalesce(local.config.naming["azurerm_virtual_wan"].name, var.config.global.name)
   suffixes      = local.config.naming["azurerm_virtual_wan"].suffixes
   random_length = local.config.naming["azurerm_virtual_wan"].random_length
 }
@@ -59,7 +66,7 @@ resource "azurecaf_name" "virtual_hub" {
   for_each = { for k, v in local.config.virtual_hubs : k => v if local.config.type != null }
 
   resource_type = "azurerm_virtual_hub"
-  name          = local.config.naming["azurerm_virtual_hub"].name
+  name          = coalesce(local.config.naming["azurerm_virtual_hub"].name, var.config.global.name)
   suffixes      = concat([each.key], local.config.naming["azurerm_virtual_hub"].suffixes)
   random_length = local.config.naming["azurerm_virtual_hub"].random_length
 }
@@ -76,11 +83,39 @@ resource "azurerm_virtual_hub" "this" {
   address_prefix      = each.value.address_prefix
 }
 
+resource "azurecaf_name" "virtual_hub_connection" {
+  for_each = setunion([], [
+    for k, v in local.config.virtual_hubs : [
+      for i in try(v.virtual_network_connections, []) : join("-", [k, split("/", i)[8]])
+     ] if local.config.type != null
+  ]...)
+
+  resource_type = "azurerm_virtual_hub_connection"
+  name          = coalesce(local.config.naming["azurerm_virtual_hub_connection"].name, each.key)
+  suffixes      = local.config.naming["azurerm_virtual_hub_connection"].suffixes
+  random_length = local.config.naming["azurerm_virtual_hub_connection"].random_length
+}
+
+resource "azurerm_virtual_hub_connection" "this" {
+  for_each = merge([
+    for k, v in local.config.virtual_hubs : {
+      for i in try(v.virtual_network_connections, []) : join("-", [k, split("/", i)[8]]) => {
+        virtual_hub_id            = azurerm_virtual_hub.this[k].id
+        remote_virtual_network_id = i
+      }
+    } if local.config.type != null
+  ]...)
+
+  name                      = azurecaf_name.virtual_hub_connection[each.key].result
+  virtual_hub_id            = each.value.virtual_hub_id
+  remote_virtual_network_id = each.value.remote_virtual_network_id
+}
+
 resource "azurecaf_name" "vpn_gateway" {
   for_each = azurecaf_name.virtual_hub
 
   resource_type = "general"
-  name          = local.config.naming["azurerm_vpn_gateway"].name
+  name          = coalesce(local.config.naming["azurerm_vpn_gateway"].name, var.config.global.name)
   prefixes      = ["vpng"]
   suffixes      = concat([each.key], local.config.naming["azurerm_vpn_gateway"].suffixes)
   random_length = local.config.naming["azurerm_vpn_gateway"].random_length
@@ -105,7 +140,7 @@ resource "azurecaf_name" "vpn_site" {
     } if local.config.type != null
   ]...) 
 
-  name          = local.config.naming["azurerm_vpn_site"].name
+  name          = coalesce(local.config.naming["azurerm_vpn_site"].name, var.config.global.name)
   resource_type = "azurerm_vpn_site"
   suffixes      = concat(split("_", each.key), local.config.naming["azurerm_vpn_site"].suffixes)
   random_length = local.config.naming["azurerm_vpn_site"].random_length
@@ -146,10 +181,10 @@ resource "azurecaf_name" "vpn_gateway_connection" {
     } if local.config.type != null
   ]...) 
 
-  name          = local.config.naming["azurerm_vpn_site"].name
+  name          = coalesce(local.config.naming["azurerm_vpn_gateway_connection"].name, var.config.global.name)
   resource_type = "azurerm_vpn_gateway_connection"
-  suffixes      = concat(split("_", each.key), local.config.naming["azurerm_vpn_site"].suffixes)
-  random_length = local.config.naming["azurerm_vpn_site"].random_length
+  suffixes      = concat(split("_", each.key), local.config.naming["azurerm_vpn_gateway_connection"].suffixes)
+  random_length = local.config.naming["azurerm_vpn_gateway_connection"].random_length
 }
 
 resource "azurerm_vpn_gateway_connection" "this" {
