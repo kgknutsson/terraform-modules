@@ -214,8 +214,10 @@ locals {
         try(keys(var.config.global.cdn_frontdoor.firewall_policies), [])
       ) : k => merge(
         {
-          sku_name = null
-          mode     = null
+          sku_name      = null
+          mode          = null
+          custom_rules  = []
+          managed_rules = []
         },
         try(local.env_config.cdn_frontdoor.firewall_policies[k], {}),
         try(var.config.global.cdn_frontdoor.firewall_policies[k], {}),
@@ -531,6 +533,52 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "this" {
   tags                = local.config.tags
   sku_name            = each.value.sku_name
   mode                = each.value.mode
+
+  dynamic "custom_rule" {
+    for_each = [
+      for i in each.value.custom_rules : merge(
+        {
+          enabled                        = true
+          priority                       = null
+          rate_limit_duration_in_minutes = null
+          rate_limit_threshold           = 100
+        },
+        i
+      )
+    ]
+
+    content {
+      name                           = custom_rule.value.name
+      action                         = custom_rule.value.action
+      enabled                        = custom_rule.value.enabled
+      priority                       = custom_rule.value.priority
+      type                           = custom_rule.value.type
+      rate_limit_duration_in_minutes = custom_rule.value.rate_limit_duration_in_minutes
+      rate_limit_threshold           = custom_rule.value.rate_limit_threshold
+
+      dynamic "match_condition" {
+        for_each = [
+          for i in custom_rule.value.match_conditions : merge(
+            {
+              selector           = null
+              negation_condition = false
+              transforms         = []
+            },
+            i
+          )
+        ]
+
+        content {
+          match_variable     = match_condition.value.match_variable
+          match_values       = match_condition.value.match_values
+          operator           = match_condition.value.operator
+          selector           = match_condition.value.selector
+          negation_condition = match_condition.value.negation_condition
+          transforms         = match_condition.value.transforms
+        }
+      }
+    }
+  }
 
   dynamic "managed_rule" {
     for_each = each.value.managed_rules
