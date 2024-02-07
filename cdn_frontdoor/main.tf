@@ -432,6 +432,20 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
       }
     }
 
+    dynamic "route_configuration_override_action" {
+      for_each = each.value.actions.route_configuration_override_action[*]
+
+      content {
+        cache_duration                = try(route_configuration_override_action.value.cache_duration, null)
+        cdn_frontdoor_origin_group_id = try(azurerm_cdn_frontdoor_origin_group.this[route_configuration_override_action.value.cdn_frontdoor_origin_group_id].id, null)
+        forwarding_protocol           = try(route_configuration_override_action.value.forwarding_protocol, "MatchRequest")
+        query_string_caching_behavior = try(route_configuration_override_action.value.query_string_caching_behavior, "IgnoreQueryString")
+        query_string_parameters       = try(route_configuration_override_action.value.query_string_parameters, null)
+        compression_enabled           = try(route_configuration_override_action.value.compression_enabled, null)
+        cache_behavior                = try(route_configuration_override_action.value.cache_behavior, "HonorOrigin")
+      }
+    }
+
     #TODO: Add more dynamic actions
   }
 
