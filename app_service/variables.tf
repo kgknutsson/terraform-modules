@@ -59,6 +59,7 @@ variable "app_service" {
     service_plan_id                        = optional(string)
     service_plan_os_type                   = optional(string)
     application_insights_connection_string = optional(string)
+    virtual_network_subnet_id              = optional(string)
   })
   description = <<-EOT
   (Optional) Shared app service resources.

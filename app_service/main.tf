@@ -60,6 +60,7 @@ locals {
       local.env_config.app_service.virtual_network_subnet_id,
       var.virtual_network.subnet_id_map[var.config.global.app_service.virtual_network_subnet_id],
       var.config.global.app_service.virtual_network_subnet_id,
+      var.app_service.virtual_network_subnet_id,
       null
     )
 
@@ -173,6 +174,7 @@ locals {
           local.env_config.app_service.virtual_network_subnet_id,
           var.virtual_network.subnet_id_map[var.config.global.app_service.virtual_network_subnet_id],
           var.config.global.app_service.virtual_network_subnet_id,
+          var.app_service.virtual_network_subnet_id,
           null
         ) != null
 

@@ -32,6 +32,11 @@ output "user_assigned_identity_client_id" {
   description = "User assigned identity client_id"
 }
 
+output "virtual_network_subnet_id" {
+  value       = local.config.virtual_network_subnet_id
+  description = "Virtual network subnet id."
+}
+
 output "application_hostname" {
   value       = try("https://${local.default_hostname}", null)
   description = "Application URL."
