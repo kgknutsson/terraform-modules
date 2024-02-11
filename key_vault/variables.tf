@@ -60,7 +60,7 @@ variable "virtual_network" {
     subnet_id_map = map(string)
   })
   description = <<-EOT
-  (Optional) Virtual Network used by network acls.
+  (Optional) Virtual Network to use with resources in this module.
 
   Virtual Network resources created outside this module.
   EOT

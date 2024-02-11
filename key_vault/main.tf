@@ -77,9 +77,9 @@ resource "azurerm_key_vault" "this" {
   public_network_access_enabled   = local.config.public_network_access_enabled
 
   network_acls {
-    bypass = local.config.network_acls.bypass
-    default_action = local.config.network_acls.default_action
-    ip_rules = local.config.network_acls.ip_rules
+    bypass                     = local.config.network_acls.bypass
+    default_action             = local.config.network_acls.default_action
+    ip_rules                   = local.config.network_acls.ip_rules
     virtual_network_subnet_ids = local.config.network_acls.virtual_network_subnet_ids
   }
 }
