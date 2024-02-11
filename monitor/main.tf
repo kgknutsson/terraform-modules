@@ -127,7 +127,7 @@ data "azurerm_monitor_diagnostic_categories" "this" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "this" {
-  for_each = { for i in local.config.diagnostic_settings : i.name => i }
+  for_each = { for i in local.config.diagnostic_settings : i.name => i if try(i.log_analytics_workspace_id, local.config.log_analytics_workspace_id) != null }
 
   name                           = each.value.name
   target_resource_id             = each.value.target_resource_id
