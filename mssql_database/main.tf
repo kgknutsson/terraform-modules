@@ -81,6 +81,8 @@ locals {
         creation_source_database_id    = null
         collation                      = try(local.env_config.mssql_database.default_collation, var.config.global.mssql_database.default_collation, "Finnish_Swedish_CI_AS")
         maintenance_configuration_name = try(local.env_config.mssql_database.default_maintenance_configuration_name, var.config.global.mssql_database.default_maintenance_configuration_name, null)
+        short_term_retention_policy    = try(local.env_config.mssql_database.default_short_term_retention_policy, var.config.global.mssql_database.default_short_term_retention_policy, null)
+        long_term_retention_policy     = try(local.env_config.mssql_database.default_long_term_retention_policy, var.config.global.mssql_database.default_long_term_retention_policy, null)
         license_type                   = try(local.env_config.mssql_database.default_license_type, var.config.global.mssql_database.default_license_type, null)
         max_size_gb                    = try(local.env_config.mssql_database.default_max_gb_size, var.config.global.mssql_database.default_max_gb_size, 2)
         read_scale                     = try(local.env_config.mssql_database.default_read_scale, var.config.global.mssql_database.default_read_scale, false)
@@ -218,6 +220,36 @@ resource "azurerm_mssql_database" "this" {
   elastic_pool_id                = try(azurerm_mssql_elasticpool.this[local.config.databases[each.value.0].elastic_pool].id, local.config.databases[each.value.0].elastic_pool)
   zone_redundant                 = try(local.config.databases[each.value.0].instances[each.key].zone_redundant, local.config.databases[each.value.0].zone_redundant)
   tags                           = merge(local.config.tags, local.config.databases[each.value.0].tags)
+
+  dynamic "short_term_retention_policy" {
+    for_each = try(local.config.databases[each.value.0].instances[each.key].short_term_retention_policy, local.config.databases[each.value.0].short_term_retention_policy)[*]
+
+    content {
+      retention_days           = short_term_retention_policy.value.retention_days
+      backup_interval_in_hours = try(short_term_retention_policy.value.backup_interval_in_hours, null)
+    }
+  }
+
+  dynamic "long_term_retention_policy" {
+    for_each = [
+      for i in try(local.config.databases[each.value.0].instances[each.key].long_term_retention_policy, local.config.databases[each.value.0].long_term_retention_policy)[*] : merge(
+        {
+          weekly_retention         = null // Between 1 and 520 weeks in ISO8601 format e.g. P1Y, P1M, P1W or P7D
+          monthly_retention        = null // Between 1 and 120 months in ISO8601 format e.g. P1Y, P1M, P4W or P30D
+          yearly_retention         = null // Between 1 and 10 years in ISO8601 format e.g. P1Y, P12M, P52W or P365D
+          week_of_year             = null // Between 1 and 52
+        },
+        i
+      )
+    ]
+
+    content {
+      weekly_retention         = long_term_retention_policy.value.weekly_retention
+      monthly_retention        = long_term_retention_policy.value.monthly_retention
+      yearly_retention         = long_term_retention_policy.value.yearly_retention
+      week_of_year             = long_term_retention_policy.value.week_of_year
+    }
+  }
 }
 
 resource "azurecaf_name" "user_assigned_identity" {
