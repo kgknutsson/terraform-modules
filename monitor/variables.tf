@@ -86,5 +86,10 @@ variable "monitor_config" {
 
   Lists of autoscale settings, diagnostic settings and/or metric alerts.
   EOT
-  default     = null
+  default     = {
+    autoscale_settings  = null
+    diagnostic_settings = null
+    activity_log_alerts = null
+    metric_alerts       = null
+  }
 }

@@ -22,15 +22,15 @@ locals {
     log_analytics_workspace_id = try(local.env_config.monitor.log_analytics_workspace_id, var.config.global.monitor.log_analytics_workspace_id, null)
     default_action_group_ids   = concat(try(local.env_config.monitor.default_action_group_ids, []), try(var.config.global.monitor.default_action_group_ids, []))
 
-    autoscale_settings = try(
-      var.monitor_config.autoscale_setting,
+    autoscale_settings = coalesce(
+      var.monitor_config.autoscale_settings,
       concat(
         try(var.config.global.monitor.autoscale_settings, []),
         try(local.env_config.monitor.autoscale_settings, [])
       )
     )
 
-    diagnostic_settings = try(
+    diagnostic_settings = coalesce(
       var.monitor_config.diagnostic_settings,
       concat(
         try(var.config.global.monitor.diagnostic_settings, []),
@@ -43,7 +43,7 @@ locals {
       try(local.env_config.monitor.action_groups, {})
     )
 
-    activity_log_alerts = try(
+    activity_log_alerts = coalesce(
       var.monitor_config.activity_log_alerts,
       concat(
         try(var.config.global.monitor.activity_log_alerts, []),
@@ -51,7 +51,7 @@ locals {
       )
     )
 
-    metric_alerts = try(
+    metric_alerts = coalesce(
       var.monitor_config.metric_alerts,
       concat(
         try(var.config.global.monitor.metric_alerts, []),
