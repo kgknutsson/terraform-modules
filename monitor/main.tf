@@ -20,7 +20,7 @@ locals {
     )
 
     log_analytics_workspace_id = try(local.env_config.monitor.log_analytics_workspace_id, var.config.global.monitor.log_analytics_workspace_id, null)
-    default_action_group_ids   = distinct(concat(try(local.env_config.monitor.default_action_group_ids, []), try(var.config.global.monitor.default_action_group_ids, []), try(local.env_config.app_service.metric_alerts.action_group_ids, []), try(var.config.global.app_service.metric_alerts.action_group_ids, [])))
+    default_action_group_ids   = concat(try(local.env_config.monitor.default_action_group_ids, []), try(var.config.global.monitor.default_action_group_ids, []))
 
     autoscale_settings = try(
       var.monitor_config.autoscale_setting,
@@ -206,7 +206,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = try(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ])
+    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
@@ -291,7 +291,7 @@ resource "azurerm_monitor_metric_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = try(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ])
+    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
