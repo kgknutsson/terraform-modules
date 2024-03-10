@@ -222,10 +222,15 @@ locals {
       connection_string_names = try(coalescelist(concat(try(var.config.global.app_service.sticky_settings.connection_string_names, []), try(local.env_config.app_service.sticky_settings.connection_string_names, []))), null)
     }
 
-    deployment_slots = merge(
-      try(var.config.global.app_service.deployment_slots, {}),
-      try(local.env_config.app_service.deployment_slots, {})
-    )
+    deployment_slots = {
+      for k in setunion(
+        try(keys(var.config.global.app_service.deployment_slots), []),
+        try(keys(local.env_config.app_service.deployment_slots), [])
+      ) : k => merge(
+        try(var.config.global.app_service.deployment_slots[k], {}),
+        try(local.env_config.app_service.deployment_slots[k], {})
+      )
+    }
 
     hybrid_connections = merge(
       try(var.config.global.app_service.hybrid_connections, {}),
