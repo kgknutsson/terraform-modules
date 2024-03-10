@@ -397,6 +397,8 @@ resource "azurerm_linux_web_app" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -570,6 +572,8 @@ resource "azurerm_linux_web_app_slot" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
@@ -735,6 +739,8 @@ resource "azurerm_windows_web_app" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -916,6 +922,8 @@ resource "azurerm_windows_web_app_slot" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
@@ -1121,6 +1129,8 @@ resource "azurerm_linux_function_app" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
 
     dynamic "application_stack" {
@@ -1247,6 +1257,8 @@ resource "azurerm_linux_function_app_slot" "this" {
     scm_use_main_ip_restriction                   = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                             = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
@@ -1368,6 +1380,8 @@ resource "azurerm_windows_function_app" "this" {
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action          = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
 
     dynamic "application_stack" {
@@ -1480,6 +1494,8 @@ resource "azurerm_windows_function_app_slot" "this" {
     scm_use_main_ip_restriction            = local.config.site_config.scm_use_main_ip_restriction
     use_32_bit_worker                      = local.config.site_config.use_32_bit_worker
     vnet_route_all_enabled                 = local.config.site_config.vnet_route_all_enabled
+    ip_restriction_default_action          = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
+    scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
