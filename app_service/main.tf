@@ -38,6 +38,7 @@ locals {
     os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, var.app_service.service_plan_os_type, "Linux") // Linux or Windows
     sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, null)
     worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null)
+    per_site_scaling_enabled           = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false)
     storage_account_name               = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
     storage_account_access_key         = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
     functions_extension_version        = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
@@ -168,6 +169,7 @@ locals {
         scm_minimum_tls_version                       = null
         scm_use_main_ip_restriction                   = false
         use_32_bit_worker                             = false
+        worker_count                                  = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false) ? try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null) : null
 
         vnet_route_all_enabled = try(
           var.virtual_network.subnet_id_map[local.env_config.app_service.virtual_network_subnet_id],
@@ -290,14 +292,15 @@ resource "azurecaf_name" "service_plan" {
 resource "azurerm_service_plan" "this" {
   count = length(azurecaf_name.service_plan)
 
-  name                   = azurecaf_name.service_plan.0.result
-  resource_group_name    = local.config.resource_group_name
-  location               = local.config.location
-  tags                   = local.config.tags
-  os_type                = local.config.os_type
-  sku_name               = local.config.sku_name
-  worker_count           = local.config.worker_count
-  zone_balancing_enabled = local.config.zone_balancing_enabled
+  name                     = azurecaf_name.service_plan.0.result
+  resource_group_name      = local.config.resource_group_name
+  location                 = local.config.location
+  tags                     = local.config.tags
+  os_type                  = local.config.os_type
+  sku_name                 = local.config.sku_name
+  worker_count             = local.config.worker_count
+  per_site_scaling_enabled = local.config.per_site_scaling_enabled
+  zone_balancing_enabled   = local.config.zone_balancing_enabled
 }
 
 resource "azurecaf_name" "application_insights" {
@@ -399,6 +402,7 @@ resource "azurerm_linux_web_app" "this" {
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
+    worker_count                                  = local.config.site_config.worker_count
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -574,6 +578,7 @@ resource "azurerm_linux_web_app_slot" "this" {
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
+    worker_count                                  = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
@@ -741,6 +746,7 @@ resource "azurerm_windows_web_app" "this" {
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
+    worker_count                                  = local.config.site_config.worker_count
 
     dynamic "auto_heal_setting" {
       for_each = local.config.site_config.auto_heal_setting[*]
@@ -924,6 +930,7 @@ resource "azurerm_windows_web_app_slot" "this" {
     vnet_route_all_enabled                        = local.config.site_config.vnet_route_all_enabled
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
+    worker_count                                  = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "auto_heal_setting" {
@@ -1132,6 +1139,7 @@ resource "azurerm_linux_function_app" "this" {
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
+    worker_count                                  = local.config.site_config.worker_count
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
@@ -1260,6 +1268,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     ip_restriction_default_action                 = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
+    worker_count                                  = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
@@ -1383,6 +1392,7 @@ resource "azurerm_windows_function_app" "this" {
     ip_restriction_default_action          = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
+    worker_count                           = local.config.site_config.worker_count
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
@@ -1497,6 +1507,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     ip_restriction_default_action          = length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny"
     scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
+    worker_count                           = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
