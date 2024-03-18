@@ -230,7 +230,13 @@ locals {
         try(keys(local.env_config.app_service.deployment_slots), [])
       ) : k => merge(
         try(var.config.global.app_service.deployment_slots[k], {}),
-        try(local.env_config.app_service.deployment_slots[k], {})
+        try(local.env_config.app_service.deployment_slots[k], {}),
+        {
+          for i in ["app_settings", "site_config"] : i => merge(
+            try(var.config.global.app_service.deployment_slots[k][i], {}),
+            try(local.env_config.app_service.deployment_slots[k][i], {}),
+          )
+        }
       )
     }
 
