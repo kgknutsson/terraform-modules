@@ -33,23 +33,25 @@ locals {
       try(local.env_config.app_service.tags, {})
     )
 
-    type                               = try(local.env_config.app_service.type, var.config.global.app_service.type, null) // WebApp, FunctionApp
-    service_plan_id                    = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.app_service.service_plan_id, null)
-    os_type                            = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, var.app_service.service_plan_os_type, "Linux") // Linux or Windows
-    sku_name                           = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, null)
-    worker_count                       = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null)
-    per_site_scaling_enabled           = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false)
-    storage_account_name               = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
-    storage_account_access_key         = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
-    functions_extension_version        = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
-    https_only                         = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
-    builtin_logging_enabled            = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
-    client_certificate_mode            = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
-    client_certificate_exclusion_paths = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
-    public_network_access_enabled      = try(local.env_config.app_service.public_network_access_enabled, var.config.global.app_service.public_network_access_enabled, null)
-    zip_deploy_file                    = try(local.env_config.app_service.zip_deploy_file, var.config.global.app_service.zip_deploy_file, null)
-    zone_balancing_enabled             = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
-    acr_id                             = try(local.env_config.app_service.acr_id, var.config.global.app_service.acr_id, null)
+    type                                           = try(local.env_config.app_service.type, var.config.global.app_service.type, null) // WebApp, FunctionApp
+    service_plan_id                                = try(local.env_config.app_service.service_plan_id, var.config.global.app_service.service_plan_id, var.app_service.service_plan_id, null)
+    os_type                                        = try(local.env_config.app_service.os_type, var.config.global.app_service.os_type, var.app_service.service_plan_os_type, "Linux") // Linux or Windows
+    sku_name                                       = try(local.env_config.app_service.sku_name, var.config.global.app_service.sku_name, null)
+    worker_count                                   = try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null)
+    per_site_scaling_enabled                       = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false)
+    storage_account_name                           = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
+    storage_account_access_key                     = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
+    functions_extension_version                    = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
+    https_only                                     = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
+    builtin_logging_enabled                        = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
+    client_certificate_mode                        = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
+    client_certificate_exclusion_paths             = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
+    public_network_access_enabled                  = try(local.env_config.app_service.public_network_access_enabled, var.config.global.app_service.public_network_access_enabled, null)
+    ftp_publish_basic_authentication_enabled       = try(local.env_config.app_service.ftp_publish_basic_authentication_enabled, var.config.global.app_service.ftp_publish_basic_authentication_enabled, false)
+    webdeploy_publish_basic_authentication_enabled = try(local.env_config.app_service.webdeploy_publish_basic_authentication_enabled, var.config.global.app_service.webdeploy_publish_basic_authentication_enabled, false)
+    zip_deploy_file                                = try(local.env_config.app_service.zip_deploy_file, var.config.global.app_service.zip_deploy_file, null)
+    zone_balancing_enabled                         = try(local.env_config.app_service.zone_balancing_enabled, var.config.global.app_service.zone_balancing_enabled, false)
+    acr_id                                         = try(local.env_config.app_service.acr_id, var.config.global.app_service.acr_id, null)
 
     metric_alerts = {
       enabled          = try(local.env_config.app_service.metric_alerts.enabled, var.config.global.app_service.metric_alerts.enabled, true)
@@ -371,18 +373,20 @@ resource "azurecaf_name" "app_service" {
 resource "azurerm_linux_web_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "WebApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = local.config.resource_group_name
-  location                           = local.config.location
-  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
-  https_only                         = local.config.https_only
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = azurecaf_name.app_service.0.result
+  resource_group_name                            = local.config.resource_group_name
+  location                                       = local.config.location
+  service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
+  https_only                                     = local.config.https_only
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -548,17 +552,19 @@ resource "azurerm_linux_web_app" "this" {
 resource "azurerm_linux_web_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_web_app.this) != 0 }
 
-  name                               = each.key
-  app_service_id                     = azurerm_linux_web_app.this.0.id
-  service_plan_id                    = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
-  https_only                         = local.config.https_only
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = each.key
+  app_service_id                                 = azurerm_linux_web_app.this.0.id
+  service_plan_id                                = try(each.value.service_plan_id, null)
+  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  https_only                                     = local.config.https_only
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -715,18 +721,20 @@ resource "azurerm_linux_web_app_slot" "this" {
 resource "azurerm_windows_web_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "WebApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = local.config.resource_group_name
-  location                           = local.config.location
-  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
-  https_only                         = local.config.https_only
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = azurecaf_name.app_service.0.result
+  resource_group_name                            = local.config.resource_group_name
+  location                                       = local.config.location
+  service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
+  https_only                                     = local.config.https_only
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -900,17 +908,19 @@ resource "azurerm_windows_web_app" "this" {
 resource "azurerm_windows_web_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_web_app.this) != 0 }
 
-  name                               = each.key
-  app_service_id                     = azurerm_windows_web_app.this.0.id
-  service_plan_id                    = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
-  https_only                         = local.config.https_only
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = each.key
+  app_service_id                                 = azurerm_windows_web_app.this.0.id
+  service_plan_id                                = try(each.value.service_plan_id, null)
+  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  https_only                                     = local.config.https_only
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -1104,22 +1114,24 @@ resource "azurerm_app_service_connection" "this" {
 resource "azurerm_linux_function_app" "this" {
   count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = local.config.resource_group_name
-  location                           = local.config.location
-  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  storage_account_name               = local.config.storage_account_name
-  storage_account_access_key         = local.config.storage_account_access_key
-  functions_extension_version        = local.config.functions_extension_version
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
-  https_only                         = local.config.https_only
-  builtin_logging_enabled            = local.config.builtin_logging_enabled
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = azurecaf_name.app_service.0.result
+  resource_group_name                            = local.config.resource_group_name
+  location                                       = local.config.location
+  service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  storage_account_name                           = local.config.storage_account_name
+  storage_account_access_key                     = local.config.storage_account_access_key
+  functions_extension_version                    = local.config.functions_extension_version
+  virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
+  https_only                                     = local.config.https_only
+  builtin_logging_enabled                        = local.config.builtin_logging_enabled
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -1235,20 +1247,22 @@ resource "azurerm_linux_function_app" "this" {
 resource "azurerm_linux_function_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_linux_function_app.this) != 0 }
 
-  name                               = each.key
-  function_app_id                    = azurerm_linux_function_app.this.0.id
-  service_plan_id                    = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
-  storage_account_name               = local.config.storage_account_name
-  storage_account_access_key         = local.config.storage_account_access_key
-  functions_extension_version        = local.config.functions_extension_version
-  https_only                         = local.config.https_only
-  builtin_logging_enabled            = local.config.builtin_logging_enabled
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  tags                               = local.config.tags
+  name                                           = each.key
+  function_app_id                                = azurerm_linux_function_app.this.0.id
+  service_plan_id                                = try(each.value.service_plan_id, null)
+  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  storage_account_name                           = local.config.storage_account_name
+  storage_account_access_key                     = local.config.storage_account_access_key
+  functions_extension_version                    = local.config.functions_extension_version
+  https_only                                     = local.config.https_only
+  builtin_logging_enabled                        = local.config.builtin_logging_enabled
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -1359,22 +1373,24 @@ resource "azurerm_linux_function_app_slot" "this" {
 resource "azurerm_windows_function_app" "this" {
   count = local.config.os_type == "Windows" && local.config.type == "FunctionApp" ? 1 : 0
 
-  name                               = azurecaf_name.app_service.0.result
-  resource_group_name                = local.config.resource_group_name
-  location                           = local.config.location
-  service_plan_id                    = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
-  storage_account_name               = local.config.storage_account_name
-  storage_account_access_key         = local.config.storage_account_access_key
-  functions_extension_version        = local.config.functions_extension_version
-  virtual_network_subnet_id          = local.config.virtual_network_subnet_id
-  builtin_logging_enabled            = local.config.builtin_logging_enabled
-  https_only                         = local.config.https_only
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  zip_deploy_file                    = local.config.zip_deploy_file
-  tags                               = local.config.tags
+  name                                           = azurecaf_name.app_service.0.result
+  resource_group_name                            = local.config.resource_group_name
+  location                                       = local.config.location
+  service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  storage_account_name                           = local.config.storage_account_name
+  storage_account_access_key                     = local.config.storage_account_access_key
+  functions_extension_version                    = local.config.functions_extension_version
+  virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
+  builtin_logging_enabled                        = local.config.builtin_logging_enabled
+  https_only                                     = local.config.https_only
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  zip_deploy_file                                = local.config.zip_deploy_file
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
@@ -1476,20 +1492,22 @@ resource "azurerm_windows_function_app" "this" {
 resource "azurerm_windows_function_app_slot" "this" {
   for_each = { for k, v in local.config.deployment_slots : k => v if length(azurerm_windows_function_app.this) != 0 }
 
-  name                               = each.key
-  function_app_id                    = azurerm_windows_function_app.this.0.id
-  service_plan_id                    = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id          = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
-  storage_account_name               = local.config.storage_account_name
-  storage_account_access_key         = local.config.storage_account_access_key
-  functions_extension_version        = local.config.functions_extension_version
-  https_only                         = local.config.https_only
-  builtin_logging_enabled            = local.config.builtin_logging_enabled
-  client_certificate_enabled         = local.config.client_certificate_mode != null
-  client_certificate_mode            = local.config.client_certificate_mode
-  client_certificate_exclusion_paths = local.config.client_certificate_exclusion_paths
-  public_network_access_enabled      = local.config.public_network_access_enabled
-  tags                               = local.config.tags
+  name                                           = each.key
+  function_app_id                                = azurerm_windows_function_app.this.0.id
+  service_plan_id                                = try(each.value.service_plan_id, null)
+  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  storage_account_name                           = local.config.storage_account_name
+  storage_account_access_key                     = local.config.storage_account_access_key
+  functions_extension_version                    = local.config.functions_extension_version
+  https_only                                     = local.config.https_only
+  builtin_logging_enabled                        = local.config.builtin_logging_enabled
+  client_certificate_enabled                     = local.config.client_certificate_mode != null
+  client_certificate_mode                        = local.config.client_certificate_mode
+  client_certificate_exclusion_paths             = local.config.client_certificate_exclusion_paths
+  public_network_access_enabled                  = local.config.public_network_access_enabled
+  ftp_publish_basic_authentication_enabled       = local.config.ftp_publish_basic_authentication_enabled
+  webdeploy_publish_basic_authentication_enabled = local.config.webdeploy_publish_basic_authentication_enabled
+  tags                                           = local.config.tags
 
   dynamic "identity" {
     for_each = local.config.identity.type[*]
