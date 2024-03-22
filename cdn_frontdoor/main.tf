@@ -446,6 +446,15 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
       }
     }
 
+    dynamic "request_header_action" {
+      for_each = each.value.actions.request_header_action[*]
+      content {
+        header_action = try(request_header_action.value.header_action, "Overwrite")
+        header_name   = request_header_action.value.header_name
+        value         = try(request_header_action.value.value, null)
+      }
+    }
+
     #TODO: Add more dynamic actions
   }
 
