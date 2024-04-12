@@ -2,9 +2,22 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name                = var.config.global.name
     location            = var.resource_group.location
     resource_group_name = var.resource_group.name
+
+    naming = {
+      for i in ["azurerm_storage_account"] : i => merge(
+        {
+          name          = var.config.global.name
+          prefixes      = null
+          suffixes      = null
+          random_length = 10
+          use_slug      = null
+        },
+        try(lookup(var.config.global.storage_account.naming, i), {}),
+        try(lookup(local.env_config.storage_account.naming, i), {})
+      )
+    }
 
     tags = merge(
       {
@@ -61,9 +74,12 @@ locals {
 resource "azurecaf_name" "storage_account" {
   count = local.config.account_tier != null ? 1 : 0
 
-  name          = local.config.name
-  resource_type = "azurerm_storage_account"
-  random_length = 10
+  name           = local.config.naming["azurerm_storage_account"].name
+  resource_type  = "azurerm_storage_account"
+  prefixes       = local.config.naming["azurerm_storage_account"].prefixes
+  suffixes       = local.config.naming["azurerm_storage_account"].suffixes
+  random_length  = local.config.naming["azurerm_storage_account"].random_length
+  use_slug       = local.config.naming["azurerm_storage_account"].use_slug
 }
 
 resource "azurerm_storage_account" "this" {
