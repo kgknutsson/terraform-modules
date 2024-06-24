@@ -46,6 +46,10 @@ locals {
       type         = try(local.env_config.redis.identity.type, var.config.global.redis.identity.type, "SystemAssigned")
       identity_ids = concat(try(var.config.global.redis.identity.identity_ids, []), try(local.env_config.redis.identity.identity_ids, []))
     }
+    access_policies = merge(
+      try(var.config.global.redis.access_policies, {}),
+      try(local.env_config.redis.access_policies, {})
+    )
 
     access_policy_assignments = merge(
       try(var.config.global.redis.access_policy_assignments, {}),
@@ -124,6 +128,14 @@ resource "azurerm_redis_cache" "this" {
       identity_ids = identity.value.identity_ids
     }
   }
+}
+
+resource "azurerm_redis_cache_access_policy" "this" {
+  for_each = { for k, v in local.config.access_policies : k => v if length(azurerm_redis_cache.this) > 0 }
+
+  name           = each.key
+  redis_cache_id = azurerm_redis_cache.this[0].id
+  permissions    = each.value
 }
 
 resource "azurerm_redis_cache_access_policy_assignment" "this" {
