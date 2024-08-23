@@ -104,7 +104,7 @@ resource "azurerm_redis_cache" "this" {
     for_each = [
       for i in local.config.redis_configuration[*] : merge(
         {
-          azure_active_directory_enabled = null
+          active_directory_authentication_enabled = null
         },
         i
       )
