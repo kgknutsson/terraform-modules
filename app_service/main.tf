@@ -434,13 +434,23 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -613,13 +623,23 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -793,13 +813,23 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -980,13 +1010,23 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
