@@ -175,6 +175,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
 
   name                     = coalesce(try(each.value.formatted_name, null), each.key)
   resource_group_name      = local.config.resource_group_name
+  location                 = try(each.value.location, "global") // global, westeurope or northeurope
   tags                     = local.config.tags
   scopes                   = each.value.scopes
   description              = try(each.value.description, null)
