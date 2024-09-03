@@ -146,4 +146,6 @@ resource "azurerm_redis_cache_access_policy_assignment" "this" {
   access_policy_name = each.value.access_policy_name
   object_id          = each.value.object_id
   object_id_alias    = try(each.value.object_id_alias, each.key)
+
+  depends_on = [ azurerm_redis_cache_access_policy.this ]
 }
