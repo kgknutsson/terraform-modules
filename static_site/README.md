@@ -2,6 +2,9 @@
 
 Use this module to deploy Azure Static Web App resources with Terraform.
 
+>[!IMPORTANT]
+>This module is deprecated and will be removed in a future version. Use the static_web_app module, which is a drop in replacement, instead.
+
 ## Usage
 
 Add the module to a terraform root module by adding these lines of code.
