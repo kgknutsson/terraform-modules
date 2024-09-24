@@ -163,7 +163,6 @@ locals {
         ftps_state                                    = "Disabled"
         health_check_path                             = null
         health_check_eviction_time_in_min             = 10
-        auto_heal_enabled                             = null
         auto_heal_setting                             = null
         container_registry_managed_identity_client_id = null
         container_registry_use_managed_identity       = null
@@ -413,7 +412,6 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -605,7 +603,6 @@ resource "azurerm_linux_web_app_slot" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -793,7 +790,6 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -993,7 +989,6 @@ resource "azurerm_windows_web_app_slot" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
