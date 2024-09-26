@@ -143,7 +143,7 @@ resource "azurecaf_name" "private_endpoint" {
   
   name          = each.value
   resource_type = "azurerm_private_endpoint"
-  suffixes      = [local.config.name]
+  suffixes      = each.key != each.value ? [each.key, local.config.name] : [local.config.name]
 }
 
 resource "azurerm_private_endpoint" "this" {
