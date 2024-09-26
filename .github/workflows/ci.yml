@@ -1,0 +1,50 @@
+name: Terraform Docs
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - review_requested
+
+jobs:
+  change_detection:
+    name: Detect repository changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get changed files
+        id: get_changed_files
+        uses: tj-actions/changed-files@v44
+        with:
+          matrix: true
+          dir_names: true
+          files: |
+            **.tf
+            **.md
+    outputs:
+      all_changed_dirs: ${{ steps.get_changed_files.outputs.all_changed_files }}
+
+  docs:
+    name: Render terraform docs
+    runs-on: ubuntu-latest
+    needs: [change_detection]
+    if: ${{ needs.change_detection.outputs.all_changed_dirs != '[]' }}
+    strategy:
+      matrix:
+        paths: ${{fromJson(needs.change_detection.outputs.all_changed_dirs)}}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Render terraform docs and push changes back to PR
+        uses: terraform-docs/gh-actions@main
+        with:
+          working-dir: ${{ matrix.paths }}
+          output-file: README.md
+          output-method: inject
+          git-push: "true"
