@@ -1,5 +1,7 @@
 blob: privatelink.blob.core.windows.net
 file: privatelink.file.core.windows.net
+queue: privatelink.queue.core.windows.net
+table: privatelink.table.core.windows.net
 mysqlServer: privatelink.mysql.database.azure.com
 namespace: privatelink.servicebus.windows.net
 redisCache: privatelink.redis.cache.windows.net
