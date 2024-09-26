@@ -38,7 +38,7 @@ locals {
     sku_name                      = try(local.env_config.redis.sku_name, var.config.global.redis.sku_name, null) // Basic, Standard or Premium
     capacity                      = try(local.env_config.redis.capacity, var.config.global.redis.capacity, 1)
     public_network_access_enabled = try(local.env_config.redis.public_network_access_enabled, var.config.global.redis.public_network_access_enabled, false)
-    enable_non_ssl_port           = try(local.env_config.redis.enable_non_ssl_port, var.config.global.redis.enable_non_ssl_port, false)
+    non_ssl_port_enabled          = try(local.env_config.redis.non_ssl_port_enabled, var.config.global.redis.non_ssl_port_enabled, false)
     minimum_tls_version           = try(local.env_config.redis.minimum_tls_version, var.config.global.redis.minimum_tls_version, "1.2")
     redis_configuration           = try(local.env_config.redis.redis_configuration, var.config.global.redis.redis_configuration, null)
 
@@ -97,14 +97,14 @@ resource "azurerm_redis_cache" "this" {
   family                        = local.config.sku_name == "Premium" ? "P" : "C"
   capacity                      = local.config.capacity
   public_network_access_enabled = local.config.public_network_access_enabled
-  enable_non_ssl_port           = local.config.enable_non_ssl_port
+  non_ssl_port_enabled          = local.config.non_ssl_port_enabled
   minimum_tls_version           = local.config.minimum_tls_version
 
   dynamic "redis_configuration" {
     for_each = [
       for i in local.config.redis_configuration[*] : merge(
         {
-          azure_active_directory_enabled = null
+          active_directory_authentication_enabled = null
         },
         i
       )
@@ -146,4 +146,6 @@ resource "azurerm_redis_cache_access_policy_assignment" "this" {
   access_policy_name = each.value.access_policy_name
   object_id          = each.value.object_id
   object_id_alias    = try(each.value.object_id_alias, each.key)
+
+  depends_on = [ azurerm_redis_cache_access_policy.this ]
 }

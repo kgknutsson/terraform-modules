@@ -74,12 +74,12 @@ locals {
 resource "azurecaf_name" "storage_account" {
   count = local.config.account_tier != null ? 1 : 0
 
-  name           = local.config.naming["azurerm_storage_account"].name
-  resource_type  = "azurerm_storage_account"
-  prefixes       = local.config.naming["azurerm_storage_account"].prefixes
-  suffixes       = local.config.naming["azurerm_storage_account"].suffixes
-  random_length  = local.config.naming["azurerm_storage_account"].random_length
-  use_slug       = local.config.naming["azurerm_storage_account"].use_slug
+  name          = local.config.naming["azurerm_storage_account"].name
+  resource_type = "azurerm_storage_account"
+  prefixes      = local.config.naming["azurerm_storage_account"].prefixes
+  suffixes      = local.config.naming["azurerm_storage_account"].suffixes
+  random_length = local.config.naming["azurerm_storage_account"].random_length
+  use_slug      = local.config.naming["azurerm_storage_account"].use_slug
 }
 
 resource "azurerm_storage_account" "this" {

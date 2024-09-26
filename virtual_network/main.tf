@@ -23,7 +23,7 @@ locals {
 
     subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => {
       subnet_size                                   = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
-      private_endpoint_network_policies_enabled     = try(local.env_config.virtual_network.subnets[k].private_endpoint_network_policies_enabled, var.config.global.virtual_network.subnets[k].private_endpoint_network_policies_enabled, null)
+      private_endpoint_network_policies             = try(local.env_config.virtual_network.subnets[k].private_endpoint_network_policies, var.config.global.virtual_network.subnets[k].private_endpoint_network_policies, null)
       private_link_service_network_policies_enabled = try(local.env_config.virtual_network.subnets[k].private_link_service_network_policies_enabled, var.config.global.virtual_network.subnets[k].private_link_service_network_policies_enabled, null)
       security_group_rules                          = try(local.env_config.virtual_network.subnets[k].security_group_rules, var.config.global.virtual_network.subnets[k].security_group_rules, [])
       service_endpoints                             = concat(try(local.env_config.virtual_network.subnets[k].service_endpoints, []), try(var.config.global.virtual_network.subnets[k].service_endpoints, []))
@@ -92,7 +92,7 @@ resource "azurerm_subnet" "this" {
   resource_group_name                           = azurerm_virtual_network.this.0.resource_group_name
   virtual_network_name                          = azurerm_virtual_network.this.0.name
   address_prefixes                              = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
-  private_endpoint_network_policies_enabled     = each.value.private_endpoint_network_policies_enabled
+  private_endpoint_network_policies             = each.value.private_endpoint_network_policies
   private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
   service_endpoints                             = each.value.service_endpoints
 

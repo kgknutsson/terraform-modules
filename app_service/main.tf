@@ -163,7 +163,6 @@ locals {
         ftps_state                                    = "Disabled"
         health_check_path                             = null
         health_check_eviction_time_in_min             = 10
-        auto_heal_enabled                             = null
         auto_heal_setting                             = null
         container_registry_managed_identity_client_id = null
         container_registry_use_managed_identity       = null
@@ -287,6 +286,17 @@ locals {
 
   database_jdbc_basestring = local.config.database.server_fqdn != null ? format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name) : null
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
+
+  service_connection_app_settings    = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
+  service_connection_sticky_settings = flatten(
+    matchkeys(
+      values(local.service_connection_app_settings),
+      keys(local.service_connection_app_settings),
+      [
+        for k, v in local.config.service_connections : split("/", v.target_resource_id)[6]
+      ]
+    )
+  )
 }
 
 resource "azurecaf_name" "service_plan" {
@@ -402,7 +412,6 @@ resource "azurerm_linux_web_app" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -434,13 +443,23 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -521,10 +540,10 @@ resource "azurerm_linux_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -532,14 +551,18 @@ resource "azurerm_linux_web_app" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
-      sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
-      sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
-      sticky_settings["AZURE_KEYVAULT_CLIENTID"],
-      sticky_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
@@ -580,7 +603,6 @@ resource "azurerm_linux_web_app_slot" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -613,13 +635,23 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -705,10 +737,18 @@ resource "azurerm_linux_web_app_slot" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
@@ -750,7 +790,6 @@ resource "azurerm_windows_web_app" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -793,13 +832,23 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -877,10 +926,10 @@ resource "azurerm_windows_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -888,14 +937,18 @@ resource "azurerm_windows_web_app" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
-      sticky_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
-      sticky_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
-      sticky_settings["AZURE_KEYVAULT_CLIENTID"],
-      sticky_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
@@ -936,7 +989,6 @@ resource "azurerm_windows_web_app_slot" "this" {
     ftps_state                                    = local.config.site_config.ftps_state
     health_check_path                             = local.config.site_config.health_check_path
     health_check_eviction_time_in_min             = local.config.site_config.health_check_path != null ? local.config.site_config.health_check_eviction_time_in_min : null
-    auto_heal_enabled                             = local.config.site_config.auto_heal_setting != null ? coalesce(local.config.site_config.auto_heal_enabled, true) : null
     container_registry_managed_identity_client_id = try(coalesce(local.config.site_config.container_registry_managed_identity_client_id, azurerm_user_assigned_identity.this.0.client_id), null)
     container_registry_use_managed_identity       = local.config.site_config.container_registry_use_managed_identity
     minimum_tls_version                           = local.config.site_config.minimum_tls_version
@@ -980,13 +1032,23 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = try(auto_heal_setting.value.trigger.slow_requests, [])
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
               interval   = slow_request.value.interval
               time_taken = slow_request.value.time_taken
-              path       = try(slow_request.value.path, null)
+            }
+          }
+
+          dynamic "slow_request_with_path" {
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+
+            content {
+              count      = slow_request.value.count
+              interval   = slow_request.value.interval
+              time_taken = slow_request.value.time_taken
+              path       = slow_request.value.path
             }
           }
 
@@ -1069,10 +1131,18 @@ resource "azurerm_windows_web_app_slot" "this" {
   lifecycle {
     ignore_changes = [
       logs,
-      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
       app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
       app_settings["AZURE_KEYVAULT_CLIENTID"],
       app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
       tags["hidden-link: /app-insights-conn-string"],
@@ -1224,16 +1294,28 @@ resource "azurerm_linux_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
 
   lifecycle {
     ignore_changes = [
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       site_config.0.application_insights_key,
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -1360,6 +1442,18 @@ resource "azurerm_linux_function_app_slot" "this" {
 
   lifecycle {
     ignore_changes = [
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       site_config.0.application_insights_key,
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -1469,16 +1563,28 @@ resource "azurerm_windows_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings))) != 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings))
+      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
 
   lifecycle {
     ignore_changes = [
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       site_config.0.application_insights_key,
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
@@ -1591,6 +1697,18 @@ resource "azurerm_windows_function_app_slot" "this" {
 
   lifecycle {
     ignore_changes = [
+      app_settings["AZURE_REDIS_HOST"],
+      app_settings["AZURE_REDIS_PORT"],
+      app_settings["AZURE_REDIS_DATABASE"],
+      app_settings["AZURE_REDIS_SSL"],
+      app_settings["AZURE_REDIS_PRINCIPALID"],
+      app_settings["AZURE_REDIS_SCOPE"],
+      app_settings["AZURE_KEYVAULT_RESOURCEENDPOINT"],
+      app_settings["AZURE_KEYVAULT_CLIENTID"],
+      app_settings["AZURE_KEYVAULT_SCOPE"],
+      app_settings["AZURE_STORAGEBLOB_RESOURCEENDPOINT"],
+      app_settings["AZURE_STORAGEBLOB_CLIENTID"],
+      app_settings["AZURE_STORAGEBLOB_SCOPE"],
       site_config.0.application_insights_key,
       # Temporary fix to avoid recurring changes to tags until fixed in the azurerm provider.
       # See: https://github.com/hashicorp/terraform-provider-azurerm/issues/16569
