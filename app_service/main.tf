@@ -44,7 +44,7 @@ locals {
     functions_extension_version                    = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
     https_only                                     = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
     builtin_logging_enabled                        = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
-    client_certificate_mode                        = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, null) // Required, Optional or OptionalInteractiveUser
+    client_certificate_mode                        = try(local.env_config.app_service.client_certificate_mode, var.config.global.app_service.client_certificate_mode, "Optional") // Required, Optional or OptionalInteractiveUser
     client_certificate_exclusion_paths             = join(";", concat(try(local.env_config.app_service.client_certificate_exclusion_paths, []), try(var.config.global.app_service.client_certificate_exclusion_paths, [])))
     public_network_access_enabled                  = try(local.env_config.app_service.public_network_access_enabled, var.config.global.app_service.public_network_access_enabled, null)
     ftp_publish_basic_authentication_enabled       = try(local.env_config.app_service.ftp_publish_basic_authentication_enabled, var.config.global.app_service.ftp_publish_basic_authentication_enabled, false)
