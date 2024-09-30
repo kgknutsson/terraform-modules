@@ -74,7 +74,9 @@ locals {
             try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]),  []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_logs]), [])
           ),
-          [{ category_group = "allLogs" }]
+          [
+            try(local.env_config.app_service.type, var.config.global.app_service.type, null) == "FunctionApp" ? { category = "FunctionAppLogs" } : { category_group = "allLogs" }
+          ]
         )
         : i if i != null
       ]
@@ -84,7 +86,9 @@ locals {
             try(flatten([var.config.global.app_service.monitor_diagnostic_setting.metrics]),  []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.metrics]), [])
           ),
-          [{ category = "AllMetrics" }]
+          [
+            { category = "AllMetrics" }
+          ]
         )
         : i if i != null
       ]
