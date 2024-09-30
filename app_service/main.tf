@@ -99,7 +99,7 @@ locals {
       disable_ip_masking   = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
       daily_data_cap_in_gb = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
       sampling_percentage  = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
-      workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, null)
+      workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, var.app_service.application_insights_workspace_id, null)
       config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
     }
 
@@ -340,7 +340,7 @@ resource "azurerm_service_plan" "this" {
 }
 
 resource "azurecaf_name" "application_insights" {
-  count = length(local.config.insights.workspace_id[*])
+  count = local.config.insights.workspace_id != null && try(var.app_service.application_insights_connection_string, null) == null ? 1 : 0
 
   name          = local.config.naming["azurerm_application_insights"].name
   resource_type = "azurerm_application_insights"

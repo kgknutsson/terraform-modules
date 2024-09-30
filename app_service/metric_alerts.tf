@@ -118,7 +118,7 @@ resource "azurerm_monitor_metric_alert" "mem90" {
 }
 
 resource "azurerm_monitor_metric_alert" "heap80" {
-  count = min(length(local.config.insights.workspace_id[*]), local.config.metric_alerts.enabled && local.config.type == "WebApp" ? 1 : 0)
+  count = min(length(azurerm_application_insights.this), local.config.metric_alerts.enabled && local.config.type == "WebApp" ? 1 : 0)
 
   name                     = "Java heap usage above threshold - ${azurerm_application_insights.this.0.name}"
   resource_group_name      = local.config.resource_group_name
