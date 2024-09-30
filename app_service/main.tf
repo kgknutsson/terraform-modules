@@ -69,11 +69,11 @@ locals {
 
     monitor_diagnostic_setting = merge(
       {
-        log_category_types = null
-        metrics            = null
+        enabled_logs = [{ category_group = "allLogs" }]
+        metrics      = [{ category = "AllMetrics" }]
       },
-      try(coalesce(var.config.global.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {}),
-      try(coalesce(local.env_config.app_service.monitor_diagnostic_setting, { log_category_types = [], metrics = [] }), {})
+      try(var.config.global.app_service.monitor_diagnostic_setting,  {}),
+      try(local.env_config.app_service.monitor_diagnostic_setting, {})
     )
 
     insights = {
