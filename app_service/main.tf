@@ -67,14 +67,28 @@ locals {
       null
     )
 
-    monitor_diagnostic_setting = merge(
-      {
-        enabled_logs = [{ category_group = "allLogs" }]
-        metrics      = [{ category = "AllMetrics" }]
-      },
-      try(var.config.global.app_service.monitor_diagnostic_setting,  {}),
-      try(local.env_config.app_service.monitor_diagnostic_setting, {})
-    )
+    monitor_diagnostic_setting = {
+      enabled_logs = [
+        for i in coalescelist(
+          concat(
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]),  []),
+            try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_logs]), [])
+          ),
+          [{ category_group = "allLogs" }]
+        )
+        : i if i != null
+      ]
+      metrics = [
+        for i in coalescelist(
+          concat(
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.metrics]),  []),
+            try(flatten([local.env_config.app_service.monitor_diagnostic_setting.metrics]), [])
+          ),
+          [{ category = "AllMetrics" }]
+        )
+        : i if i != null
+      ]
+    }
 
     insights = {
       application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
