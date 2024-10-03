@@ -13,7 +13,7 @@ locals {
           random_length = null
           use_slug      = null
         },
-        try(lookup(var.config.resource_group.naming, i), {}),
+        try(lookup(var.config.global.resource_group.naming, i), {}),
         try(lookup(local.env_config.resource_group.naming, i), {})
       )
     }
