@@ -27,6 +27,11 @@ output "application_insights_workspace_id" {
   description = "Application insights connection string."
 }
 
+output "application_insights_private_link_scope_id" {
+  value       = local.config.insights.private_link_scope_id
+  description = "Application insights private link scope."
+}
+
 output "user_assigned_identity_id" {
   value       = try(azurerm_user_assigned_identity.this.0.id, null)
   description = "User assigned identity id"

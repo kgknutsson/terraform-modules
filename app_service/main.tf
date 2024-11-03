@@ -95,12 +95,16 @@ locals {
     }
 
     insights = {
-      application_type     = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
-      disable_ip_masking   = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
-      daily_data_cap_in_gb = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
-      sampling_percentage  = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
-      workspace_id         = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, var.app_service.application_insights_workspace_id, null)
-      config_content       = try(local.env_config.app_service.insights.config_content, var.config.global.app_service.insights.config_content, null)
+      application_type              = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
+      disable_ip_masking            = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
+      daily_data_cap_in_gb          = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
+      sampling_percentage           = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
+      retention_in_days             = try(local.env_config.app_service.insights.retention_in_days, var.config.global.app_service.insights.retention_in_days, null)
+      local_authentication_disabled = try(local.env_config.app_service.insights.local_authentication_disabled, var.config.global.app_service.insights.local_authentication_disabled, null)
+      internet_ingestion_enabled    = try(local.env_config.app_service.insights.internet_ingestion_enabled, var.config.global.app_service.insights.internet_ingestion_enabled, null)
+      internet_query_enabled        = try(local.env_config.app_service.insights.internet_query_enabled, var.config.global.app_service.insights.internet_query_enabled, null)
+      workspace_id                  = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, var.app_service.application_insights_workspace_id, null)
+      private_link_scope_id         = try(local.env_config.app_service.insights.private_link_scope_id, var.config.global.app_service.insights.private_link_scope_id, null)
     }
 
     identity = {
@@ -353,15 +357,19 @@ resource "azurecaf_name" "application_insights" {
 resource "azurerm_application_insights" "this" {
   count = length(azurecaf_name.application_insights)
 
-  name                 = azurecaf_name.application_insights.0.result
-  resource_group_name  = local.config.resource_group_name
-  location             = local.config.location
-  tags                 = local.config.tags
-  application_type     = local.config.insights.application_type
-  daily_data_cap_in_gb = local.config.insights.daily_data_cap_in_gb
-  disable_ip_masking   = local.config.insights.disable_ip_masking
-  sampling_percentage  = local.config.insights.sampling_percentage
-  workspace_id         = local.config.insights.workspace_id
+  name                          = azurecaf_name.application_insights.0.result
+  resource_group_name           = local.config.resource_group_name
+  location                      = local.config.location
+  tags                          = local.config.tags
+  application_type              = local.config.insights.application_type
+  daily_data_cap_in_gb          = local.config.insights.daily_data_cap_in_gb
+  disable_ip_masking            = local.config.insights.disable_ip_masking
+  sampling_percentage           = local.config.insights.sampling_percentage
+  retention_in_days             = local.config.insights.retention_in_days
+  local_authentication_disabled = local.config.insights.local_authentication_disabled
+  internet_ingestion_enabled    = local.config.insights.internet_ingestion_enabled
+  internet_query_enabled        = local.config.insights.internet_query_enabled
+  workspace_id                  = local.config.insights.workspace_id
 }
 
 resource "azurecaf_name" "user_assigned_identity" {
