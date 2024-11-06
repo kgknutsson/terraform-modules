@@ -49,8 +49,8 @@ locals {
   }
 
   subresource_dns_zone_map = yamldecode(file("${path.module}/private_endpoint_dns_zones.yml"))
-  subresource_names        = flatten([for k, v in local.config.subnets : v.private_endpoints[*].subresource_names])
-
+  subresource_names        = flatten([for k, v in local.config.subnets : [for i in v.private_endpoints : i.subresource_names if try(i.private_dns_zone_group.private_dns_zone_ids, null) == null]])
+  private_dns_zones        = flatten(values({ for k, v in local.subresource_dns_zone_map : k => v... if contains(local.subresource_names, k) }))
 }
 
 resource "azurecaf_name" "virtual_network" {
@@ -122,6 +122,7 @@ resource "azurerm_subnet" "this" {
 
 data "azurerm_subnet" "this" {
   for_each = { for k, v in local.config.subnets : k => v if length(data.azurerm_virtual_network.this) > 0 }
+
   name                 = azurecaf_name.subnet[each.key].result
   resource_group_name  = data.azurerm_virtual_network.this.0.resource_group_name
   virtual_network_name = data.azurerm_virtual_network.this.0.name
@@ -130,7 +131,7 @@ data "azurerm_subnet" "this" {
 resource "azurerm_private_dns_zone" "this" {
   for_each = setunion(
     keys(local.config.private_dns_zones),
-    flatten(values({ for k, v in local.subresource_dns_zone_map : k => v... if contains(local.subresource_names, k) }))
+    local.private_dns_zones
   )
 
   name                = each.key
