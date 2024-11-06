@@ -56,6 +56,7 @@ locals {
     elastic_pools = { for k in setunion(keys(try(local.env_config.mssql_database.elastic_pools, {})), keys(try(var.config.global.mssql_database.elastic_pools, {}))) : k => merge(
       {
         suffixes                       = []
+        enclave_type                   = "Default"
         maintenance_configuration_name = null
         max_size_gb                    = 10
         license_type                   = "LicenseIncluded"
@@ -80,6 +81,7 @@ locals {
         create_mode                    = "Default"
         creation_source_database_id    = null
         collation                      = try(local.env_config.mssql_database.default_collation, var.config.global.mssql_database.default_collation, "Finnish_Swedish_CI_AS")
+        enclave_type                   = try(local.env_config.mssql_database.default_enclave_type, var.config.global.mssql_database.default_enclave_type, "Default")
         maintenance_configuration_name = try(local.env_config.mssql_database.default_maintenance_configuration_name, var.config.global.mssql_database.default_maintenance_configuration_name, null)
         short_term_retention_policy    = try(local.env_config.mssql_database.default_short_term_retention_policy, var.config.global.mssql_database.default_short_term_retention_policy, null)
         long_term_retention_policy     = try(local.env_config.mssql_database.default_long_term_retention_policy, var.config.global.mssql_database.default_long_term_retention_policy, null)
@@ -175,6 +177,7 @@ resource "azurerm_mssql_elasticpool" "this" {
   resource_group_name            = local.config.resource_group_name
   location                       = local.config.location
   server_name                    = azurerm_mssql_server.this.name
+  enclave_type                   = each.value.enclave_type
   maintenance_configuration_name = each.value.maintenance_configuration_name
   max_size_gb                    = each.value.max_size_gb
   license_type                   = each.value.license_type
@@ -212,6 +215,7 @@ resource "azurerm_mssql_database" "this" {
   create_mode                    = try(local.config.databases[each.value.0].instances[each.key].create_mode, local.config.databases[each.value.0].create_mode)
   creation_source_database_id    = try(local.config.databases[each.value.0].instances[each.key].creation_source_database_id, local.config.databases[each.value.0].creation_source_database_id)
   collation                      = try(local.config.databases[each.value.0].instances[each.key].collation, local.config.databases[each.value.0].collation)
+  enclave_type                   = try(local.config.databases[each.value.0].instances[each.key].enclave_type, local.config.databases[each.value.0].enclave_type)
   maintenance_configuration_name = contains(["Basic", "S0", "S1"], try(local.config.databases[each.value.0].instances[each.key].sku_name, local.config.databases[each.value.0].sku_name)) || try(azurerm_mssql_elasticpool.this[local.config.databases[each.value.0].elastic_pool].id, local.config.databases[each.value.0].elastic_pool) != null ? null : try(local.config.databases[each.value.0].instances[each.key].maintenance_configuration_name, local.config.databases[each.value.0].maintenance_configuration_name)
   license_type                   = try(local.config.databases[each.value.0].instances[each.key].license_type, local.config.databases[each.value.0].license_type)
   max_size_gb                    = try(local.config.databases[each.value.0].instances[each.key].max_size_gb, local.config.databases[each.value.0].max_size_gb)
