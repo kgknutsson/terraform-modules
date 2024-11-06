@@ -89,7 +89,7 @@ module "subnet_addrs" {
 }
 
 resource "azurecaf_name" "subnet" {
-  for_each = local.config.subnets
+  for_each = { for k, v in local.config.subnets : k => v if max(length(local.config.address_space), length(data.azurerm_virtual_network.this)) > 0 }
 
   name          = each.key
   resource_type = "azurerm_subnet"
