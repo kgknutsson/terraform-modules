@@ -85,11 +85,12 @@ variable "virtual_network" {
 
 variable "storage_account" {
   type        = object({
-    name               = string
-    primary_access_key = string
+    name                      = string
+    primary_access_key        = string
+    primary_connection_string = string
   })
   description = <<-EOT
-  (Optional) Backend Storage Account needed by Function App.
+  (Optional) Backend Storage Account needed by App Service.
 
   Storage Account resources created outside this module.
   EOT

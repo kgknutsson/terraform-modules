@@ -41,6 +41,7 @@ locals {
     per_site_scaling_enabled                       = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false)
     storage_account_name                           = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
     storage_account_access_key                     = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
+    storage_account_connection_string              = try(local.env_config.app_service.storage_account_connection_string, var.config.global.app_service.storage_account_connection_string, var.storage_account.primary_connection_string, null)
     functions_extension_version                    = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
     https_only                                     = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
     builtin_logging_enabled                        = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
@@ -299,6 +300,9 @@ locals {
     } : {},
     local.config.os_type == "Linux" && local.config.type == "WebApp" ? {
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    } : {},
+    try(local.config.app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"], false) ? {
+      "AzureWebJobsStorage" = local.config.storage_account_connection_string
     } : {},
     local.config.zip_deploy_file != null ? {
       "WEBSITE_RUN_FROM_PACKAGE" = 1
