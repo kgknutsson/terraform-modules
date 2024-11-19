@@ -59,7 +59,7 @@ resource "azurerm_monitor_metric_alert" "healthcheck" {
 }
 
 resource "azurerm_monitor_metric_alert" "cpu90" {
-  count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
+  count = local.config.metric_alerts.enabled && try(length(regexall("^(?:Y|FC|EP)[0-9]+$", local.config.sku_name)) == 0, false) ? 1 : 0
 
   name                     = "CPU usage above threshold - ${azurerm_service_plan.this.0.name}"
   resource_group_name      = local.config.resource_group_name
@@ -89,7 +89,7 @@ resource "azurerm_monitor_metric_alert" "cpu90" {
 }
 
 resource "azurerm_monitor_metric_alert" "mem90" {
-  count = local.config.metric_alerts.enabled && length(azurerm_service_plan.this) > 0 ? 1 : 0
+  count = local.config.metric_alerts.enabled && try(length(regexall("^(?:Y|FC|EP)[0-9]+$", local.config.sku_name)) == 0, false) ? 1 : 0
 
   name                     = "Memory usage above threshold - ${azurerm_service_plan.this.0.name}"
   resource_group_name      = local.config.resource_group_name
