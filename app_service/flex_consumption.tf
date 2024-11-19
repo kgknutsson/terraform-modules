@@ -1,5 +1,5 @@
 locals {
-  flex_count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" && startswith(local.config.sku_name, "FC") ? 1 : 0
+  flex_count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" && try(startswith(local.config.sku_name, "FC"), false) ? 1 : 0
 }
 
 resource "azurecaf_name" "flex_storage_container" {
