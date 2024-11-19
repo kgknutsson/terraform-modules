@@ -85,8 +85,10 @@ variable "virtual_network" {
 
 variable "storage_account" {
   type        = object({
+    id                        = string
     name                      = string
     primary_access_key        = string
+    primary_blob_endpoint     = string
     primary_connection_string = string
   })
   description = <<-EOT

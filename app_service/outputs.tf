@@ -1,5 +1,5 @@
 locals {
-  default_hostname = try(try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).default_hostname, null)
+  default_hostname = try(try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).default_hostname, azapi_resource.flex_function[0].output.properties.defaultHostName, null)
 }
 
 output "service_plan_id" {

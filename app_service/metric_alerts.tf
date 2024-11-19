@@ -1,12 +1,13 @@
 resource "azurerm_monitor_diagnostic_setting" "this" {
   count = min(
-    length(concat(azurerm_windows_web_app.this, azurerm_linux_web_app.this, azurerm_windows_function_app.this, azurerm_linux_function_app.this)),
+    length(local.config.type[*]),
+    length(local.config.os_type[*]),
     length(local.config.insights.workspace_id[*]),
     try(length(local.config.monitor_diagnostic_setting.enabled_logs) + length(local.config.monitor_diagnostic_setting.metrics), 1)
   )
 
   name                       = "SendToLogAnalytics"
-  target_resource_id         = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0).id
+  target_resource_id         = try(azurerm_windows_web_app.this.0, azurerm_linux_web_app.this.0, azurerm_windows_function_app.this.0, azurerm_linux_function_app.this.0, azapi_resource.flex_function.0).id
   log_analytics_workspace_id = local.config.insights.workspace_id
 
   dynamic "enabled_log" {

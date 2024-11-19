@@ -1212,7 +1212,7 @@ resource "azurerm_app_service_connection" "this" {
 }
 
 resource "azurerm_linux_function_app" "this" {
-  count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" ? 1 : 0
+  count = local.config.os_type == "Linux" && local.config.type == "FunctionApp" && !startswith(local.config.sku_name, "FC") ? 1 : 0
 
   name                                           = azurecaf_name.app_service.0.result
   resource_group_name                            = local.config.resource_group_name
