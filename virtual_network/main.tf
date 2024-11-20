@@ -22,6 +22,16 @@ locals {
     virtual_network_id = try(local.env_config.virtual_network.virtual_network_id, var.config.global.virtual_network.virtual_network_id, null)
     address_space      = try(local.env_config.virtual_network.virtual_network_id, var.config.global.virtual_network.virtual_network_id, null) == null ? try([local.env_config.virtual_network.address_space], [var.config.global.virtual_network.address_space], []) : []
 
+    nat_gateway = try(one([for i in merge(try(local.env_config.virtual_network.nat_gateway, {}), try(var.config.global.virtual_network.nat_gateway, {}))[*] : merge(
+      {
+        sku_name                    = null
+        public_ip_allocation_method = "Static"
+        zones                       = null
+        virtual_network_subnet_id   = null
+      },
+      i
+    ) if try(i.sku_name, null) != null]), null)
+
     subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => {
       subnet_size                                   = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
       private_endpoint_network_policies             = try(local.env_config.virtual_network.subnets[k].private_endpoint_network_policies, var.config.global.virtual_network.subnets[k].private_endpoint_network_policies, null)
@@ -239,4 +249,58 @@ resource "azurerm_subnet_network_security_group_association" "this" {
 
   subnet_id                 = azurerm_subnet.this[each.key].id
   network_security_group_id = each.value.id
+}
+
+resource "azurecaf_name" "nat_gateway" {
+  count = length(local.config.nat_gateway[*])
+
+  name          = local.config.name
+  resource_type = "general"
+  prefixes      = ["ng"]
+  suffixes      = [var.environment]
+  
+}
+
+resource "azurerm_nat_gateway" "this" {
+  count = length(local.config.nat_gateway[*])
+
+  name                = azurecaf_name.nat_gateway[0].result
+  resource_group_name = local.config.resource_group_name
+  location            = local.config.location
+  sku_name            = local.config.nat_gateway.sku_name
+  zones               = local.config.nat_gateway.zones
+  tags                = local.config.tags
+}
+
+resource "azurecaf_name" "public_ip" {
+  count = length(local.config.nat_gateway[*])
+
+  name          = local.config.name
+  resource_type = "azurerm_public_ip"
+  suffixes      = [var.environment]
+}
+
+resource "azurerm_public_ip" "this" {
+  count = length(local.config.nat_gateway[*])
+
+  name                = azurecaf_name.public_ip[0].result
+  resource_group_name = local.config.resource_group_name
+  location            = local.config.location
+  allocation_method   = local.config.nat_gateway.public_ip_allocation_method
+  zones               = local.config.nat_gateway.zones
+  tags                = local.config.tags
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "this" {
+  count = length(local.config.nat_gateway[*])
+
+  nat_gateway_id       = azurerm_nat_gateway.this[0].id
+  public_ip_address_id = azurerm_public_ip.this[0].id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "this" {
+  count = length(try(local.config.nat_gateway.virtual_network_subnet_id[*], []))
+
+  subnet_id      = try(azurerm_subnet.this[local.config.nat_gateway.virtual_network_subnet_id].id, local.config.nat_gateway.virtual_network_subnet_id)
+  nat_gateway_id = azurerm_nat_gateway.this[0].id
 }
