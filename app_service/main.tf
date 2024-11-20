@@ -260,6 +260,20 @@ locals {
             try(var.config.global.app_service.deployment_slots[k][i], {}),
             try(local.env_config.app_service.deployment_slots[k][i], {}),
           )
+        },
+        {
+          virtual_network_subnet_id = try(
+            var.virtual_network.subnet_id_map[local.env_config.app_service.deployment_slots[k].virtual_network_subnet_id],
+            local.env_config.app_service.deployment_slots[k].virtual_network_subnet_id,
+            var.virtual_network.subnet_id_map[var.config.global.app_service.deployment_slots[k].virtual_network_subnet_id],
+            var.config.global.app_service.deployment_slots[k].virtual_network_subnet_id,
+            var.virtual_network.subnet_id_map[local.env_config.app_service.virtual_network_subnet_id],
+            local.env_config.app_service.virtual_network_subnet_id,
+            var.virtual_network.subnet_id_map[var.config.global.app_service.virtual_network_subnet_id],
+            var.config.global.app_service.virtual_network_subnet_id,
+            var.app_service.virtual_network_subnet_id,
+            null
+          )
         }
       )
     }
@@ -611,7 +625,7 @@ resource "azurerm_linux_web_app_slot" "this" {
   name                                           = each.key
   app_service_id                                 = azurerm_linux_web_app.this.0.id
   service_plan_id                                = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   https_only                                     = local.config.https_only
   client_certificate_enabled                     = local.config.client_certificate_mode != null
   client_certificate_mode                        = local.config.client_certificate_mode
@@ -997,7 +1011,7 @@ resource "azurerm_windows_web_app_slot" "this" {
   name                                           = each.key
   app_service_id                                 = azurerm_windows_web_app.this.0.id
   service_plan_id                                = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   https_only                                     = local.config.https_only
   client_certificate_enabled                     = local.config.client_certificate_mode != null
   client_certificate_mode                        = local.config.client_certificate_mode
@@ -1365,7 +1379,7 @@ resource "azurerm_linux_function_app_slot" "this" {
   name                                           = each.key
   function_app_id                                = azurerm_linux_function_app.this.0.id
   service_plan_id                                = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
   storage_account_access_key                     = local.config.storage_account_access_key
   functions_extension_version                    = local.config.functions_extension_version
@@ -1634,7 +1648,7 @@ resource "azurerm_windows_function_app_slot" "this" {
   name                                           = each.key
   function_app_id                                = azurerm_windows_function_app.this.0.id
   service_plan_id                                = try(each.value.service_plan_id, null)
-  virtual_network_subnet_id                      = try(each.value.virtual_network_subnet_id, local.config.virtual_network_subnet_id)
+  virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
   storage_account_access_key                     = local.config.storage_account_access_key
   functions_extension_version                    = local.config.functions_extension_version
