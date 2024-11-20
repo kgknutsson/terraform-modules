@@ -7,7 +7,7 @@ locals {
     resource_group_name = var.resource_group.name
 
     naming = {
-      for i in ["azurerm_application_insights"] : i => merge(
+      for i in ["azurerm_service_plan", "azurerm_application_insights"] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -328,9 +328,12 @@ locals {
 resource "azurecaf_name" "service_plan" {
   count = local.config.sku_name == null ? 0 : 1
 
-  name          = local.config.name
+  name          = local.config.naming["azurerm_service_plan"].name
   resource_type = "azurerm_app_service_plan"
-  suffixes      = [var.environment]
+  prefixes      = local.config.naming["azurerm_service_plan"].prefixes
+  suffixes      = local.config.naming["azurerm_service_plan"].suffixes
+  random_length = local.config.naming["azurerm_service_plan"].random_length
+  use_slug      = local.config.naming["azurerm_service_plan"].use_slug
 }
 
 resource "azurerm_service_plan" "this" {
