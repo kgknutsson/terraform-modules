@@ -588,10 +588,10 @@ resource "azurerm_linux_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
+      app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -974,10 +974,10 @@ resource "azurerm_windows_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
+      app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -1343,10 +1343,10 @@ resource "azurerm_linux_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
+      app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
@@ -1614,10 +1614,10 @@ resource "azurerm_windows_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, keys(local.appinsights_app_settings), local.service_connection_sticky_settings)) > 0 ]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
-      app_setting_names       = concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings)
+      app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
       connection_string_names = sticky_settings.value.connection_string_names
     }
   }
