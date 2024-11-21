@@ -365,6 +365,18 @@ resource "azurerm_service_plan" "this" {
   zone_balancing_enabled   = local.config.zone_balancing_enabled
 }
 
+resource "terraform_data" "app_replacement_trigger" {
+  count = local.config.virtual_network_subnet_id != null && local.config.os_type != null && local.config.type != null ? 1 : 0
+
+  input = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+}
+
+resource "terraform_data" "app_slot_replacement_trigger" {
+  for_each = { for k, v in local.config.deployment_slots : k => v if v.virtual_network_subnet_id != null && local.config.os_type != null && local.config.type != null }
+
+  input = try(each.value.service_plan_id, null) != null ? each.value.service_plan_id : local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+}
+
 resource "azurecaf_name" "application_insights" {
   count = local.config.insights.workspace_id != null && try(var.app_service.application_insights_connection_string, null) == null ? 1 : 0
 
@@ -617,6 +629,7 @@ resource "azurerm_linux_web_app" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_replacement_trigger[0]]
   }
 }
 
@@ -803,6 +816,7 @@ resource "azurerm_linux_web_app_slot" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
 }
 
@@ -1003,6 +1017,7 @@ resource "azurerm_windows_web_app" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_replacement_trigger[0]]
   }
 }
 
@@ -1197,6 +1212,7 @@ resource "azurerm_windows_web_app_slot" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
 }
 
@@ -1372,6 +1388,7 @@ resource "azurerm_linux_function_app" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_replacement_trigger[0]]
   }
 }
 
@@ -1511,6 +1528,7 @@ resource "azurerm_linux_function_app_slot" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
 }
 
@@ -1643,6 +1661,7 @@ resource "azurerm_windows_function_app" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_replacement_trigger[0]]
   }
 }
 
@@ -1768,6 +1787,7 @@ resource "azurerm_windows_function_app_slot" "this" {
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
     ]
+    replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
 }
 
