@@ -193,6 +193,7 @@ locals {
         scm_minimum_tls_version                       = null
         scm_use_main_ip_restriction                   = false
         use_32_bit_worker                             = false
+        runtime_scale_monitoring_enabled              = null
         worker_count                                  = try(local.env_config.app_service.per_site_scaling_enabled, var.config.global.app_service.per_site_scaling_enabled, false) ? try(local.env_config.app_service.worker_count, var.config.global.app_service.worker_count, null) : null
 
         vnet_route_all_enabled = try(
@@ -1275,6 +1276,7 @@ resource "azurerm_linux_function_app" "this" {
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
     worker_count                                  = local.config.site_config.worker_count
+    runtime_scale_monitoring_enabled              = local.config.site_config.runtime_scale_monitoring_enabled
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
@@ -1418,6 +1420,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     scm_ip_restriction_default_action             = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string        = local.appinsights_connection_string
     worker_count                                  = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
+    runtime_scale_monitoring_enabled              = local.config.site_config.runtime_scale_monitoring_enabled
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
@@ -1556,6 +1559,7 @@ resource "azurerm_windows_function_app" "this" {
     scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
     worker_count                           = local.config.site_config.worker_count
+    runtime_scale_monitoring_enabled       = local.config.site_config.runtime_scale_monitoring_enabled
 
     dynamic "application_stack" {
       for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
@@ -1685,6 +1689,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     scm_ip_restriction_default_action      = local.config.site_config.scm_use_main_ip_restriction ? length(local.config.ip_restrictions) == 0 ? "Allow" : "Deny" : length(local.config.scm_ip_restrictions) == 0 ? "Allow" : "Deny"
     application_insights_connection_string = local.appinsights_connection_string
     worker_count                           = try(each.value.site_config.worker_count, local.config.site_config.worker_count)
+    runtime_scale_monitoring_enabled       = local.config.site_config.runtime_scale_monitoring_enabled
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
