@@ -1,3 +1,8 @@
+moved {
+  from = azurerm_monitor_diagnostic_setting.this[0]
+  to   = azurerm_monitor_diagnostic_setting.this["production"]
+}
+
 resource "azurerm_monitor_diagnostic_setting" "this" {
   for_each = toset([for i in concat(["production"], keys(local.config.deployment_slots)) : i if min(
     length(local.config.type[*]),
