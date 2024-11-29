@@ -45,10 +45,11 @@ variable "resource_group" {
     location = string
   })
   description = <<-EOT
-  (Required) Resource group to create new resources in.
+  (Optional) Resource group to create new resources in.
 
   Resource Group resources created outside this module.
   EOT
+  default = null
 }
 
 variable "app_service" {
