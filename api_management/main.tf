@@ -32,10 +32,11 @@ locals {
       try(local.env_config.api_management.tags, {})
     )
 
-    sku_name        = try(local.env_config.api_management.sku_name, var.config.global.api_management.sku_name, null)
-    publisher_name  = try(local.env_config.api_management.publisher_name, var.config.global.api_management.publisher_name, null)
-    publisher_email = try(local.env_config.api_management.publisher_email, var.config.global.api_management.publisher_email, null)
-    min_api_version = try(local.env_config.api_management.min_api_version, var.config.global.api_management.min_api_version, "2019-12-01")
+    api_management_id = try(local.env_config.api_management.api_management_id, var.config.global.api_management.api_management_id, null)
+    sku_name          = try(local.env_config.api_management.sku_name, var.config.global.api_management.sku_name, null)
+    publisher_name    = try(local.env_config.api_management.publisher_name, var.config.global.api_management.publisher_name, null)
+    publisher_email   = try(local.env_config.api_management.publisher_email, var.config.global.api_management.publisher_email, null)
+    min_api_version   = try(local.env_config.api_management.min_api_version, var.config.global.api_management.min_api_version, "2019-12-01")
 
     apis = {
       for k in keys(merge(
@@ -219,10 +220,17 @@ resource "azurerm_api_management" "this" {
   }
 }
 
+data "azurerm_api_management" "this" {
+  count = length(local.config.api_management_id[*])
+
+  name                = split("/", local.config.api_management_id)[8]
+  resource_group_name = split("/", local.config.api_management_id)[4]
+}
+
 resource "azurerm_api_management_api" "this" {
   for_each = local.config.apis
 
-  api_management_name   = azurerm_api_management.this[0].name
+  api_management_name   = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name   = local.config.resource_group_name
   name                  = each.key
   revision              = each.value.revision
@@ -273,7 +281,7 @@ resource "azurerm_api_management_api_diagnostic" "this" {
   }
   
   api_name                  = azurerm_api_management_api.this[each.key].name
-  api_management_name       = azurerm_api_management.this[0].name
+  api_management_name       = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   api_management_logger_id  = try(azurerm_api_management_logger.this[each.value.logger_id].id, each.value.logger_id)
   resource_group_name       = local.config.resource_group_name
   identifier                = each.value.identifier
@@ -441,7 +449,7 @@ resource "azurerm_api_management_api_operation" "this" {
     } if v.import == null
   ]...)
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   api_name            = each.value.api_name
   operation_id        = each.value.operation_id
@@ -465,7 +473,7 @@ resource "azurerm_api_management_api_operation" "this" {
 resource "azurerm_api_management_api_operation_policy" "this" {
   for_each = { for k, v in azurerm_api_management_api_operation.this : k => merge(v, local.config.apis[v.api_name].operations[v.operation_id].policy ) if can(local.config.apis[v.api_name].operations[v.operation_id].policy) }
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   api_name            = each.value.api_name
   operation_id        = each.value.operation_id
@@ -478,7 +486,7 @@ resource "azurerm_api_management_api_operation_policy" "this" {
 resource "azurerm_api_management_api_policy" "this" {
   for_each = { for k, v in local.config.apis : k => v.policy if v.policy != null }
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   api_name            = each.key
   xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
@@ -490,7 +498,7 @@ resource "azurerm_api_management_api_policy" "this" {
 resource "azurerm_api_management_product" "this" {
   for_each = local.config.products
 
-  api_management_name   = azurerm_api_management.this[0].name
+  api_management_name   = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name   = local.config.resource_group_name
   product_id            = each.key
   display_name          = coalesce(each.value.display_name, each.key)
@@ -521,7 +529,7 @@ resource "azurerm_api_management_product_api" "this" {
     ]
   )...)
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   product_id          = each.value.product_id
   api_name            = each.value.api_name
@@ -532,7 +540,7 @@ resource "azurerm_api_management_product_api" "this" {
 resource "azurerm_api_management_product_policy" "this" {
   for_each = { for k, v in local.config.products : k => v.policy if v.policy != null }
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   product_id          = each.key
   xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
@@ -542,7 +550,7 @@ resource "azurerm_api_management_product_policy" "this" {
 resource "azurerm_api_management_backend" "this" {
   for_each = local.config.backends
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   name                = each.key
   description         = try(coalesce(each.value.description, split("/", each.value.resource_id)[8]), null)
@@ -596,7 +604,7 @@ resource "azurerm_api_management_backend" "this" {
 resource "azurerm_api_management_user" "this" {
   for_each = local.config.users
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   user_id             = each.key
   email               = each.value.email
@@ -611,7 +619,7 @@ resource "azurerm_api_management_user" "this" {
 resource "azurerm_api_management_subscription" "this" {
   for_each = local.config.subscriptions
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   display_name        = each.key
   api_id              = try(azurerm_api_management_api.this, each.value.api_id)
@@ -627,7 +635,7 @@ resource "azurerm_api_management_subscription" "this" {
 resource "azurerm_api_management_logger" "this" {
   for_each = local.config.loggers
 
-  api_management_name = azurerm_api_management.this[0].name
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = local.config.resource_group_name
   name                = each.key
   description         = each.value.description
@@ -646,7 +654,7 @@ resource "azurerm_api_management_logger" "this" {
 resource "azurerm_api_management_diagnostic" "this" {
   for_each = { for k, v in azurerm_api_management_logger.this : k => v.id if k == local.config.diagnostic.logger_id }
 
-  api_management_name       = azurerm_api_management.this[0].name
+  api_management_name       = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   api_management_logger_id  = each.value
   resource_group_name       = local.config.resource_group_name
   identifier                = local.config.diagnostic.identifier
