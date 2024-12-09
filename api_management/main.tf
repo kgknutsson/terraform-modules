@@ -471,7 +471,22 @@ resource "azurerm_api_management_api_operation" "this" {
 }
 
 resource "azurerm_api_management_api_operation_policy" "this" {
-  for_each = { for k, v in azurerm_api_management_api_operation.this : k => merge(v, local.config.apis[v.api_name].operations[v.operation_id].policy ) if can(local.config.apis[v.api_name].operations[v.operation_id].policy) }
+  for_each = merge([
+    for k, v in local.config.apis : {
+      for i in coalescelist(
+        keys(v.operations),
+        ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
+      ) : join("_", [k, i]) => merge(
+        {
+          api_name            = k
+          operation_id        = i
+        },
+        {
+          policy = try(v.operations[i].policy, null)
+        }
+      ) if try(v.operations[i].policy, null) != null
+    }
+  ]...)
 
   api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = try(azurerm_api_management.this[0].resource_group_name, data.azurerm_api_management.this[0].resource_group_name)
