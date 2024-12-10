@@ -478,12 +478,10 @@ resource "azurerm_api_management_api_operation_policy" "this" {
         ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
       ) : join("_", [k, i]) => merge(
         {
-          api_name            = k
-          operation_id        = i
+          api_name     = k
+          operation_id = i
         },
-        {
-          policy = try(v.operations[i].policy, null)
-        }
+        v.operations[i].policy
       ) if try(v.operations[i].policy, null) != null
     }
   ]...)
