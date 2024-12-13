@@ -18,6 +18,17 @@ resource "azurerm_storage_container" "this" {
   storage_account_id = var.storage_account.id
 }
 
+locals {
+  flex_app_settings = merge(
+    {
+      "AzureWebJobsStorage"                   = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_connection_string
+      "AzureWebJobsStorage__accountName"      = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? local.config.storage_account_name : null
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
+    },
+    local.config.app_settings
+  )
+}
+
 resource "azapi_resource" "flex_function" {
   type = "Microsoft.Web/sites@2024-04-01"
 
@@ -72,24 +83,12 @@ resource "azapi_resource" "flex_function" {
       publicNetworkAccess = local.config.public_network_access_enabled == false ? "Disabled" : "Enabled"
       serverFarmId        = replace(local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id, "serverFarms", "serverfarms")
       siteConfig = {
-        appSettings = [
-          try(startswith(local.config.identity.type, "SystemAssigned"), false) ? {
-            name  = "AzureWebJobsStorage__accountName"
-            value = local.config.storage_account_name
-          } : {
-            name  = "AzureWebJobsStorage"
-            value = local.config.storage_account_connection_string
-          },
-          {
-            name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
-            value = try(azurerm_application_insights.this.0.connection_string, var.app_service.application_insights_connection_string, null)
-          }
-        ]
-        healthCheckPath                        = local.config.site_config.health_check_path
-        http20Enabled                          = false
-        httpLoggingEnabled                     = null
-        minTlsCipherSuite                      = null
-        minTlsVersion                          = local.config.site_config.minimum_tls_version
+        appSettings        = [for k, v in local.flex_app_settings : { name = k, value = tostring(v) } if v != null]
+        healthCheckPath    = local.config.site_config.health_check_path
+        http20Enabled      = false
+        httpLoggingEnabled = null
+        minTlsCipherSuite  = null
+        minTlsVersion      = local.config.site_config.minimum_tls_version
       }
       virtualNetworkSubnetId = local.config.virtual_network_subnet_id
       vnetRouteAllEnabled    = true
