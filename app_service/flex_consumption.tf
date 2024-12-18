@@ -99,6 +99,7 @@ resource "azapi_resource" "flex_function" {
 
   lifecycle {
     ignore_changes = [
+      body.properties.functionAppConfig.deployment.storage,
       tags["hidden-link: /app-insights-conn-string"],
       tags["hidden-link: /app-insights-instrumentation-key"],
       tags["hidden-link: /app-insights-resource-id"],
