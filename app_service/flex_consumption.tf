@@ -106,6 +106,43 @@ resource "azapi_resource" "flex_function" {
   }
 }
 
+resource "azapi_update_resource" "web_sites_config" {
+  type = "Microsoft.Web/sites/config@2024-04-01"
+
+  count = min(local.flex_count, length(local.config.ip_restrictions))
+
+  name      = "web"
+  parent_id = azapi_resource.flex_function[0].id
+  body = {
+    properties = {
+      ipSecurityRestrictions = concat(
+        [
+          for i in local.config.ip_restrictions : {
+            action               = coalesce(i.action, "Allow")
+            description          = null
+            headers              = i.headers
+            ipAddress            = i.ip_address
+            name                 = i.name
+            priority             = i.priority
+            subnetMask           = null
+            vnetSubnetResourceId = i.virtual_network_subnet_id
+          }
+        ],
+        [
+          {
+            action      = "Deny"
+            description = "Deny all access"
+            ipAddress   = "Any"
+            name        = "Deny all"
+            priority    = 2147483647
+          }
+        ]
+      )
+      ipSecurityRestrictionsDefaultAction = "Deny"
+    }
+  }
+}
+
 resource "azurerm_role_assignment" "func" {
   count = local.flex_count
 
