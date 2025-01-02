@@ -38,6 +38,22 @@ locals {
     publisher_email   = try(local.env_config.api_management.publisher_email, var.config.global.api_management.publisher_email, null)
     min_api_version   = try(local.env_config.api_management.min_api_version, var.config.global.api_management.min_api_version, "2019-12-01")
 
+    named_values = {
+      for k in keys(merge(
+        try(var.config.global.api_management.named_values, {}),
+        try(local.env_config.api_management.named_values, {})
+      )) : k => merge(
+        {
+          display_name         = k
+          value                = null
+          secret               = null
+          value_from_key_vault = null
+        },
+        try(var.config.global.api_management.named_values[k], {}),
+        try(local.env_config.api_management.named_values[k], {})
+      )
+    }
+
     apis = {
       for k in keys(merge(
         try(var.config.global.api_management.apis, {}),
@@ -225,6 +241,26 @@ data "azurerm_api_management" "this" {
 
   name                = split("/", local.config.api_management_id)[8]
   resource_group_name = split("/", local.config.api_management_id)[4]
+}
+
+resource "azurerm_api_management_named_value" "this" {
+  for_each = local.config.named_values
+
+  api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
+  resource_group_name = try(azurerm_api_management.this[0].resource_group_name, data.azurerm_api_management.this[0].resource_group_name)
+  name                = each.key
+  display_name        = each.value.display_name
+  value               = each.value.value
+  secret              = each.value.secret
+
+  dynamic "value_from_key_vault" {
+    for_each = each.value.value_from_key_vault[*]
+
+    content {
+      secret_id          = try(value_from_key_vault.value.secret_id, value_from_key_vault.value)
+      identity_client_id = try(value_from_key_vault.value.identity_client_id, null)
+    }
+  }
 }
 
 resource "azurerm_api_management_api" "this" {
