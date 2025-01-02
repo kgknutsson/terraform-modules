@@ -95,8 +95,8 @@ locals {
           credentials = null
 
           tls = {
-            validate_certificate_chain = false
-            validate_certificate_name  = false
+            validate_certificate_chain = true
+            validate_certificate_name  = true
           }
         },
         try(var.config.global.api_management.backends[k], {}),
