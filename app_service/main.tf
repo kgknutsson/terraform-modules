@@ -366,15 +366,15 @@ resource "azurerm_service_plan" "this" {
 }
 
 resource "terraform_data" "app_replacement_trigger" {
-  count = local.config.virtual_network_subnet_id != null && local.config.os_type != null && local.config.type != null ? 1 : 0
+  count = local.config.os_type != null && local.config.type != null ? 1 : 0
 
-  input = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  input = local.config.virtual_network_subnet_id != null ? local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id : null
 }
 
 resource "terraform_data" "app_slot_replacement_trigger" {
-  for_each = { for k, v in local.config.deployment_slots : k => v if v.virtual_network_subnet_id != null && local.config.os_type != null && local.config.type != null }
+  for_each = { for k, v in local.config.deployment_slots : k => v if local.config.os_type != null && local.config.type != null }
 
-  input = try(each.value.service_plan_id, null) != null ? each.value.service_plan_id : local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
+  input = each.value.virtual_network_subnet_id != null || local.config.virtual_network_subnet_id != null ? try(each.value.service_plan_id, null) != null ? each.value.service_plan_id : local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id : null
 }
 
 resource "azurecaf_name" "application_insights" {
