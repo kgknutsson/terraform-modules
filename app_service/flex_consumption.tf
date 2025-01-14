@@ -75,8 +75,8 @@ resource "azapi_resource" "flex_function" {
           triggers             = null
         }
         runtime = {
-          name    = "java"
-          version = "17"
+          name    = local.config.runtime.name
+          version = tostring(local.config.runtime.version)
         }
       }
       httpsOnly           = true

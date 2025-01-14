@@ -180,6 +180,15 @@ locals {
       )
     }
 
+    runtime = merge(
+      {
+        name    = "java"
+        version = "17"
+      },
+      try(var.config.global.app_service.runtime, {}),
+      try(local.env_config.app_service.runtime, {}),
+    )
+
     site_config = merge(
       {
         always_on                                     = true
