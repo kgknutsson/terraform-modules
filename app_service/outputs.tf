@@ -32,6 +32,11 @@ output "application_insights_private_link_scope_id" {
   description = "Application insights private link scope."
 }
 
+output "system_assigned_identity_principal_id" {
+  value = try(try(azurerm_windows_web_app.this[0], azurerm_linux_web_app.this[0], azurerm_windows_function_app.this[0], azurerm_linux_function_app.this[0], azapi_resource.flex_function[0]).identity[0].principal_id, null)
+  description = "System assigned identity principal id."
+}
+
 output "user_assigned_identity_id" {
   value       = try(azurerm_user_assigned_identity.this.0.id, null)
   description = "User assigned identity id"
