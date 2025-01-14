@@ -7,7 +7,7 @@ locals {
     resource_group_name = var.resource_group.name
 
     naming = {
-      for i in ["azurerm_service_plan", "azurerm_application_insights"] : i => merge(
+      for i in ["azurerm_service_plan", "azurerm_application_insights", "azurerm_monitor_private_link_scope"] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -102,8 +102,8 @@ locals {
       sampling_percentage           = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
       retention_in_days             = try(local.env_config.app_service.insights.retention_in_days, var.config.global.app_service.insights.retention_in_days, null)
       local_authentication_disabled = try(local.env_config.app_service.insights.local_authentication_disabled, var.config.global.app_service.insights.local_authentication_disabled, null)
-      internet_ingestion_enabled    = try(local.env_config.app_service.insights.internet_ingestion_enabled, var.config.global.app_service.insights.internet_ingestion_enabled, null)
-      internet_query_enabled        = try(local.env_config.app_service.insights.internet_query_enabled, var.config.global.app_service.insights.internet_query_enabled, null)
+      internet_ingestion_enabled    = try(local.env_config.app_service.insights.internet_ingestion_enabled, var.config.global.app_service.insights.internet_ingestion_enabled, true)
+      internet_query_enabled        = try(local.env_config.app_service.insights.internet_query_enabled, var.config.global.app_service.insights.internet_query_enabled, true)
       workspace_id                  = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, var.app_service.application_insights_workspace_id, null)
       private_link_scope_id         = try(local.env_config.app_service.insights.private_link_scope_id, var.config.global.app_service.insights.private_link_scope_id, null)
     }
@@ -413,6 +413,36 @@ resource "azurerm_application_insights" "this" {
   internet_ingestion_enabled    = local.config.insights.internet_ingestion_enabled
   internet_query_enabled        = local.config.insights.internet_query_enabled
   workspace_id                  = local.config.insights.workspace_id
+}
+
+resource "azurecaf_name" "monitor_private_link_scope" {
+  count = min(length(azurecaf_name.application_insights), (local.config.insights.internet_ingestion_enabled && local.config.insights.internet_query_enabled) || local.config.insights.private_link_scope_id != null ? 0 : 1)
+
+  name          = local.config.naming["azurerm_monitor_private_link_scope"].name
+  resource_type = "azurerm_monitor_private_link_scope"
+  prefixes      = local.config.naming["azurerm_monitor_private_link_scope"].prefixes
+  suffixes      = local.config.naming["azurerm_monitor_private_link_scope"].suffixes
+  random_length = local.config.naming["azurerm_monitor_private_link_scope"].random_length
+  use_slug      = local.config.naming["azurerm_monitor_private_link_scope"].use_slug
+}
+
+resource "azurerm_monitor_private_link_scope" "this" {
+  count = length(azurecaf_name.monitor_private_link_scope)
+
+  name                  = azurecaf_name.monitor_private_link_scope[0].result
+  resource_group_name   = local.config.resource_group_name
+  tags                  = local.config.tags
+  ingestion_access_mode = local.config.insights.internet_ingestion_enabled ? "Open" : "PrivateOnly"
+  query_access_mode     = local.config.insights.internet_query_enabled ? "Open" : "PrivateOnly"
+}
+
+resource "azurerm_monitor_private_link_scoped_service" "this" {
+  count = length(azurecaf_name.monitor_private_link_scope)
+
+  name                = azurerm_application_insights.this[0].name
+  resource_group_name = local.config.resource_group_name
+  linked_resource_id  = azurerm_application_insights.this[0].id
+  scope_name          = azurerm_monitor_private_link_scope.this[0].name
 }
 
 resource "azurecaf_name" "user_assigned_identity" {
