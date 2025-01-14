@@ -17,3 +17,4 @@ hybridcompute:
   - privatelink.his.arc.azure.com
   - privatelink.guestconfiguration.azure.com
   - privatelink.dp.kubernetesconfiguration.azure.com
+sites: privatelink.azurewebsites.net
