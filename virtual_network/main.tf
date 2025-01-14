@@ -183,13 +183,13 @@ resource "azurerm_private_endpoint" "this" {
 
   private_dns_zone_group {
     name                 = try(each.value.private_dns_zone_group.name, each.value.private_dns_zone_group, "default")
-    private_dns_zone_ids = try(each.value.private_dns_zone_group.private_dns_zone_ids, compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if contains(each.value.subresource_names, k)])))
+    private_dns_zone_ids = try(each.value.private_dns_zone_group.private_dns_zone_ids, compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if contains(flatten([each.value.subresource_names]), k)])))
   }
 
   private_service_connection {
     name                           = azurecaf_name.private_endpoint[each.key].result
     private_connection_resource_id = each.value.private_connection_resource_id
-    subresource_names              = each.value.subresource_names
+    subresource_names              = flatten([each.value.subresource_names])
     is_manual_connection           = each.value.is_manual_connection
   }
 
