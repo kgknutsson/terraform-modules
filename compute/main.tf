@@ -79,6 +79,11 @@ locals {
       enabled             = try(local.env_config.compute.boot_diagnostics.enabled, var.config.global.compute.boot_diagnostics.enabled, false)
       storage_account_uri = try(local.env_config.compute.boot_diagnostics.storage_account_uri, var.config.global.compute.boot_diagnostics.storage_account_uri, var.storage_account.primary_blob_endpoint, null)
     }
+
+    scale_in = {
+      force_deletion_enabled = try(local.env_config.compute.scale_in.force_deletion_enabled, var.config.global.compute.scale_in.force_deletion_enabled, false)
+      rule                   = try(local.env_config.compute.scale_in.rule, var.config.global.compute.scale_in.rule, "Default")
+    }
   }
 }
 
@@ -212,6 +217,11 @@ resource "azurerm_linux_virtual_machine_scale_set" "this" {
     content {
       storage_account_uri = boot_diagnostics.value
     }
+  }
+
+  scale_in {
+    force_deletion_enabled = local.config.scale_in.force_deletion_enabled
+    rule                   = local.config.scale_in.rule
   }
 
   lifecycle {
