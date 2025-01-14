@@ -223,8 +223,4 @@ resource "azurerm_linux_virtual_machine_scale_set" "this" {
     force_deletion_enabled = local.config.scale_in.force_deletion_enabled
     rule                   = local.config.scale_in.rule
   }
-
-  lifecycle {
-    ignore_changes = [ custom_data ]
-  }
 }
