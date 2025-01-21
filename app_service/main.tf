@@ -297,7 +297,7 @@ locals {
       server_fqdn     = try(local.env_config.database.server_fqdn, var.config.global.database.server_fqdn, null)
       server_port     = try(local.env_config.database.server_port, var.config.global.database.server_port, 1433)
       name            = try(local.env_config.database.name, var.config.global.database.name, var.config.global.name)
-      jdbc_template   = try(local.env_config.database.jdbc_template, var.config.global.database.jdbc_template, "jdbc:sqlserver://%s:%s;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryMSI")
+      jdbc_template   = try(local.env_config.database.jdbc_template, var.config.global.database.jdbc_template, "jdbc:sqlserver://%s:%s;database=%s;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;authentication=ActiveDirectoryDefault")
       jdbc_properties = merge(try(var.config.global.database.jdbc_properties, {}), try(local.env_config.database.jdbc_properties, {}))
     }
   }
