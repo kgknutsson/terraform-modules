@@ -7,7 +7,7 @@ locals {
     resource_group_name = var.resource_group.name
 
     naming = {
-      for i in ["azurerm_service_plan", "azurerm_application_insights", "azurerm_monitor_private_link_scope"] : i => merge(
+      for i in ["azurerm_service_plan", "azurerm_application_insights", "azurerm_monitor_private_link_scope", "azurerm_app_service"] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -474,9 +474,12 @@ resource "azurerm_role_assignment" "this" {
 resource "azurecaf_name" "app_service" {
   count = local.config.type != null ? 1 : 0
 
-  name          = local.config.name
+  name          = local.config.naming["azurerm_app_service"].name
   resource_type = local.config.type == "WebApp" ? "azurerm_app_service" : "azurerm_function_app"
-  suffixes      = [var.environment]
+  prefixes      = local.config.naming["azurerm_app_service"].prefixes
+  suffixes      = local.config.naming["azurerm_app_service"].suffixes
+  random_length = local.config.naming["azurerm_app_service"].random_length
+  use_slug      = local.config.naming["azurerm_app_service"].use_slug
 }
 
 resource "azurerm_linux_web_app" "this" {
