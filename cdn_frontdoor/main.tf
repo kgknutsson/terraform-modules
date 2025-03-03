@@ -139,6 +139,7 @@ locals {
           origin_host_header             = null
           priority                       = 1
           weight                         = 1000
+          private_link                   = null
         },
         try(local.env_config.cdn_frontdoor.origins[k], {}),
         try(var.config.global.cdn_frontdoor.origins[k], {}),
@@ -377,6 +378,26 @@ resource "azurerm_cdn_frontdoor_origin" "this" {
   origin_host_header             = coalesce(each.value.origin_host_header, each.value.host_name)
   priority                       = each.value.priority
   weight                         = each.value.weight
+
+  dynamic "private_link" {
+    for_each = [
+      for i in each.value.private_link[*] : merge(
+        {
+          location        = local.config.location
+          target_type     = null
+          request_message = null
+        },
+        i
+      )
+    ]
+
+    content {
+      location               = private_link.value.location
+      private_link_target_id = private_link.value.private_link_target_id
+      target_type            = private_link.value.target_type
+      request_message        = private_link.value.request_message
+    }
+  }
 }
 
 resource "azurerm_cdn_frontdoor_rule_set" "this" {
