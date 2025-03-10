@@ -217,11 +217,38 @@ locals {
         {
           sku_name      = null
           mode          = null
-          custom_rules  = []
-          managed_rules = []
         },
         try(local.env_config.cdn_frontdoor.firewall_policies[k], {}),
         try(var.config.global.cdn_frontdoor.firewall_policies[k], {}),
+        {
+          custom_rules = [
+            for i in concat(
+              try(local.env_config.cdn_frontdoor.firewall_policies[k].custom_rules, []),
+              try(var.config.global.cdn_frontdoor.firewall_policies[k].custom_rules, [])
+            ) : merge(
+              {
+                enabled                        = true
+                priority                       = null
+                rate_limit_duration_in_minutes = null
+                rate_limit_threshold           = 100
+                match_conditions               = []
+              },
+              i
+            )
+          ]
+          managed_rules = [
+            for i in concat(
+              try(local.env_config.cdn_frontdoor.firewall_policies[k].managed_rules, []),
+              try(var.config.global.cdn_frontdoor.firewall_policies[k].managed_rules, [])
+            ) : merge(
+              {
+                exclusions = []
+                overrides  = []
+              },
+              i
+            )
+          ]
+        }
       )
     }
 
@@ -579,17 +606,7 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "this" {
   mode                = each.value.mode
 
   dynamic "custom_rule" {
-    for_each = [
-      for i in each.value.custom_rules : merge(
-        {
-          enabled                        = true
-          priority                       = null
-          rate_limit_duration_in_minutes = null
-          rate_limit_threshold           = 100
-        },
-        i
-      )
-    ]
+    for_each = each.value.custom_rules
 
     content {
       name                           = custom_rule.value.name
@@ -631,6 +648,94 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "this" {
       action  = managed_rule.value.action
       type    = managed_rule.value.type
       version = managed_rule.value.version
+
+      dynamic "exclusion" {
+        for_each = [
+          for i in managed_rule.value.exclusions : merge(
+            {
+              operator = "EqualsAny"
+              selector = "*"
+            },
+            i
+          )
+        ]
+
+        content {
+          match_variable = exclusion.value.match_variable
+          operator       = exclusion.value.operator
+          selector       = exclusion.value.selector
+        }
+      }
+
+      dynamic "override" {
+        for_each = [
+          for i in managed_rule.value.overrides : merge(
+            {
+              exclusions = []
+              rules      = []
+            },
+            i
+          )
+        ]
+
+        content {
+          rule_group_name = override.value.rule_group_name
+
+          dynamic "exclusion" {
+            for_each = [
+              for i in override.value.exclusions : merge(
+                {
+                  operator = "EqualsAny"
+                  selector = "*"
+                },
+                i
+              )
+            ]
+
+            content {
+              match_variable = exclusion.value.match_variable
+              operator       = exclusion.value.operator
+              selector       = exclusion.value.selector
+            }
+          }
+
+          dynamic "rule" {
+            for_each = [
+              for i in override.value.rules : merge(
+                {
+                  enabled    = true
+                  exclusions = []
+                },
+                i
+              )
+            ]
+
+            content {
+              rule_id = rule.value.rule_id
+              action  = rule.value.action
+              enabled = rule.value.enabled
+
+              dynamic "exclusion" {
+                for_each = [
+                  for i in rule.value.exclusions : merge(
+                    {
+                      operator = "EqualsAny"
+                      selector = "*"
+                    },
+                    i
+                  )
+                ]
+
+                content {
+                  match_variable = exclusion.value.match_variable
+                  operator       = exclusion.value.operator
+                  selector       = exclusion.value.selector
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
