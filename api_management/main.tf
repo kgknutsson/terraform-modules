@@ -671,8 +671,8 @@ resource "azurerm_api_management_subscription" "this" {
   api_management_name = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   resource_group_name = try(azurerm_api_management.this[0].resource_group_name, data.azurerm_api_management.this[0].resource_group_name)
   display_name        = each.key
-  api_id              = try(azurerm_api_management_api.this, each.value.api_id)
-  product_id          = try(azurerm_api_management_product_api.this, each.value.product_id)
+  api_id              = try(azurerm_api_management_api.this[each.value.api_id].id, each.value.api_id)
+  product_id          = try(azurerm_api_management_product.this[each.value.product_id].id, each.value.product_id)
   user_id             = each.value.user_id
   primary_key         = each.value.primary_key
   secondary_key       = each.value.secondary_key
