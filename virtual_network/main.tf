@@ -150,12 +150,31 @@ resource "azurerm_private_dns_zone" "this" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "this" {
-  for_each = azurerm_private_dns_zone.this
+  for_each = merge([
+    for k, v in azurerm_private_dns_zone.this : merge(
+      {
+        (k) = {
+          name                  = try(azurerm_virtual_network.this[0], data.azurerm_virtual_network.this[0]).name
+          virtual_network_id    = try(azurerm_virtual_network.this[0], data.azurerm_virtual_network.this[0]).id
+          private_dns_zone_name = k
+        }
+      },
+      {
+        for i in concat(
+          try(local.config.private_dns_zones[k].virtual_network_links, [])
+        ) : join("_", [k, provider::azurerm::parse_resource_id(i).resource_name]) => {
+          name                  = provider::azurerm::parse_resource_id(i).resource_name
+          virtual_network_id    = i
+          private_dns_zone_name = k
+        }
+      }
+    )
+  ]...)
 
-  name                  = try(azurerm_virtual_network.this.0.name, data.azurerm_virtual_network.this.0.name)
+  name                  = each.value.name
   resource_group_name   = local.config.resource_group_name
-  virtual_network_id    = try(azurerm_virtual_network.this.0.id, data.azurerm_virtual_network.this.0.id)
-  private_dns_zone_name = each.key
+  virtual_network_id    = each.value.virtual_network_id
+  private_dns_zone_name = each.value.private_dns_zone_name
   registration_enabled  = try(local.config.private_dns_zones[each.key].registration_enabled, null)
   tags                  = local.config.tags
 }
