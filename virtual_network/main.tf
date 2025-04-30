@@ -202,7 +202,7 @@ resource "azurerm_private_endpoint" "this" {
 
   private_dns_zone_group {
     name                 = try(each.value.private_dns_zone_group.name, each.value.private_dns_zone_group, "default")
-    private_dns_zone_ids = try(each.value.private_dns_zone_group.private_dns_zone_ids, compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if contains(flatten([each.value.subresource_names]), k)])))
+    private_dns_zone_ids = try([for i in each.value.private_dns_zone_group.private_dns_zone_ids : try(azurerm_private_dns_zone.this[i].id, i)], compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if contains(flatten([each.value.subresource_names]), k)])))
   }
 
   private_service_connection {
