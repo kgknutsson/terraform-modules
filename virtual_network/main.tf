@@ -225,6 +225,26 @@ resource "terraform_data" "private_endpoint_replacement_trigger" {
   input = try(azurerm_subnet.this[each.value].address_prefixes, null)
 }
 
+resource "azurerm_private_dns_a_record" "this" {
+  for_each = merge(flatten([
+    for k, v in local.config.subnets : [
+      for i in v.private_endpoints: {
+        for ii in setproduct(i.private_dns_zone_group.private_dns_zone_ids, i.private_dns_a_record_names) : join("_", ii) => {
+          zone_name = ii[0]
+          name      = ii[1]
+          records   = [azurerm_private_endpoint.this[try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0])].private_service_connection[0].private_ip_address]
+        }
+      } if length(try(i.private_dns_zone_group.private_dns_zone_ids, [])) > 0 && length(try(i.private_dns_a_record_names, [])) > 0
+    ] if length(v.private_endpoints) > 0
+  ])...)
+
+  name                = each.value.name
+  resource_group_name = local.config.resource_group_name
+  records             = each.value.records
+  ttl                 = 300
+  zone_name           = each.value.zone_name
+}
+
 resource "azurecaf_name" "network_security_group" {
   for_each = { for k, v in local.config.subnets : k => v if length(v.security_group_rules) > 0 }
 
