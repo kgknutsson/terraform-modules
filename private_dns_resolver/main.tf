@@ -27,6 +27,11 @@ locals {
       try(var.config.global.private_dns_resolver.forwarding_rules, {}),
       try(local.env_config.private_dns_resolver.forwarding_rules, {})
     )
+
+    virtual_network_links = concat(
+      try(var.config.global.private_dns_resolver.virtual_network_links, []),
+      try(local.env_config.private_dns_resolver.virtual_network_links, [])
+    )
   }
 }
 
@@ -92,9 +97,11 @@ resource "azurerm_private_dns_resolver_forwarding_rule" "this" {
 }
 
 resource "azurerm_private_dns_resolver_virtual_network_link" "this" {
-  count = min(length(local.config.virtual_network_id[*]), length(azurerm_private_dns_resolver_dns_forwarding_ruleset.this))
+  for_each = {
+    for i in concat(local.config.virtual_network_id[*], local.config.virtual_network_links) : provider::azurerm::parse_resource_id(i)["resource_name"] => i if length(azurerm_private_dns_resolver_dns_forwarding_ruleset.this) > 0
+  }
 
-  name                      = "vnet-corehub-link"
-  virtual_network_id        = local.config.virtual_network_id
+  name                      = each.key
+  virtual_network_id        = each.value
   dns_forwarding_ruleset_id = azurerm_private_dns_resolver_dns_forwarding_ruleset.this[0].id
 }
