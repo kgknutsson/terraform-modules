@@ -32,11 +32,12 @@ locals {
       try(local.env_config.mssql_database.tags, {})
     )
 
-    version                       = try(local.env_config.mssql_database.version, var.config.global.mssql_database.version, "12.0")
-    minimum_tls_version           = try(local.env_config.mssql_database.minimum_tls_version, var.config.global.mssql_database.minimum_tls_version, "Disabled")
-    public_network_access_enabled = try(local.env_config.mssql_database.public_network_access_enabled, var.config.global.mssql_database.public_network_access_enabled, false)
-    administrator_login           = try(local.env_config.mssql_database.administrator_login, var.config.global.mssql_database.administrator_login, null)
-    administrator_login_password  = try(local.env_config.mssql_database.administrator_login_password, var.config.global.mssql_database.administrator_login_password, null)
+    version                                  = try(local.env_config.mssql_database.version, var.config.global.mssql_database.version, "12.0")
+    minimum_tls_version                      = try(local.env_config.mssql_database.minimum_tls_version, var.config.global.mssql_database.minimum_tls_version, "Disabled")
+    public_network_access_enabled            = try(local.env_config.mssql_database.public_network_access_enabled, var.config.global.mssql_database.public_network_access_enabled, false)
+    administrator_login                      = try(local.env_config.mssql_database.administrator_login, var.config.global.mssql_database.administrator_login, null)
+    administrator_login_password             = try(local.env_config.mssql_database.administrator_login_password, var.config.global.mssql_database.administrator_login_password, null)
+    express_vulnerability_assessment_enabled = try(local.env_config.mssql_database.express_vulnerability_assessment_enabled, var.config.global.mssql_database.express_vulnerability_assessment_enabled, true)
 
     azuread_administrator = merge(
       {
@@ -133,15 +134,16 @@ resource "azurecaf_name" "mssql_server" {
 }
 
 resource "azurerm_mssql_server" "this" {
-  name                          = azurecaf_name.mssql_server.result
-  resource_group_name           = local.config.resource_group_name
-  location                      = local.config.location
-  tags                          = local.config.tags
-  version                       = local.config.version
-  minimum_tls_version           = local.config.minimum_tls_version
-  public_network_access_enabled = local.config.public_network_access_enabled
-  administrator_login           = local.config.administrator_login
-  administrator_login_password  = local.config.administrator_login_password
+  name                                     = azurecaf_name.mssql_server.result
+  resource_group_name                      = local.config.resource_group_name
+  location                                 = local.config.location
+  tags                                     = local.config.tags
+  version                                  = local.config.version
+  minimum_tls_version                      = local.config.minimum_tls_version
+  public_network_access_enabled            = local.config.public_network_access_enabled
+  administrator_login                      = local.config.administrator_login
+  administrator_login_password             = local.config.administrator_login_password
+  express_vulnerability_assessment_enabled = local.config.express_vulnerability_assessment_enabled
 
   azuread_administrator {
     login_username              = local.config.azuread_administrator.login_username
