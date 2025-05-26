@@ -18,3 +18,4 @@ hybridcompute:
   - privatelink.guestconfiguration.azure.com
   - privatelink.dp.kubernetesconfiguration.azure.com
 sites: privatelink.azurewebsites.net
+Sql: privatelink.documents.azure.com
