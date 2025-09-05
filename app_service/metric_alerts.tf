@@ -155,3 +155,36 @@ resource "azurerm_monitor_metric_alert" "heap80" {
     }
   }
 }
+
+resource "azurerm_monitor_metric_alert" "responsetime" {
+  count = min(length(local.config.insights.workspace_id[*]), local.config.metric_alerts.enabled && local.config.type == "WebApp" ? 1 : 0)
+
+  name                     = "Server response time above threshold - ${azurerm_application_insights.this.0.name}"
+  resource_group_name      = local.config.resource_group_name
+  target_resource_location = local.config.location
+  tags                     = local.config.tags
+  scopes                   = [azurerm_application_insights.this.0.id]
+  window_size              = "PT5M"
+  description              = "Whenever server response time is greater than 35 sec."
+  severity                 = 2
+  target_resource_type     = "Microsoft.Insights/Components"
+
+  criteria {
+    metric_namespace = "azure.applicationinsights"
+    metric_name      = "requests/duration"
+    aggregation      = "Maximum"
+    operator         = "GreaterThan"
+    threshold        = "35000"
+
+    # Needed as sometimes the metric hasn't been reported yet
+    skip_metric_validation = true
+  }
+
+  dynamic "action" {
+    for_each = local.config.metric_alerts.action_group_ids
+
+    content {
+      action_group_id = action.value
+    }
+  }
+}
