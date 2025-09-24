@@ -32,6 +32,14 @@ locals {
       i
     ) if try(i.sku_name, null) != null]), null)
 
+    virtual_network_peerings = { for k in setunion(keys(try(local.env_config.virtual_network.virtual_network_peerings, {})), keys(try(var.config.global.virtual_network.virtual_network_peerings, {}))) : k => {
+      remote_virtual_network_id           = try(local.env_config.virtual_network.virtual_network_peerings[k].remote_virtual_network_id, var.config.global.virtual_network.virtual_network_peerings[k].remote_virtual_network_id, local.env_config.virtual_network.virtual_network_peerings[k], var.config.global.virtual_network.virtual_network_peerings[k])
+      allow_virtual_network_access        = try(local.env_config.virtual_network.virtual_network_peerings[k].allow_virtual_network_access, var.config.global.virtual_network.virtual_network_peerings[k].allow_virtual_network_access, true)
+      allow_forwarded_traffic             = try(local.env_config.virtual_network.virtual_network_peerings[k].allow_forwarded_traffic, var.config.global.virtual_network.virtual_network_peerings[k].allow_forwarded_traffic, false)
+      remote_allow_virtual_network_access = try(local.env_config.virtual_network.virtual_network_peerings[k].remote_allow_virtual_network_access, var.config.global.virtual_network.virtual_network_peerings[k].remote_allow_virtual_network_access, true)
+      remote_allow_forwarded_traffic      = try(local.env_config.virtual_network.virtual_network_peerings[k].remote_allow_forwarded_traffic, var.config.global.virtual_network.virtual_network_peerings[k].remote_allow_forwarded_traffic, false)
+    } if try(local.env_config.virtual_network.virtual_network_id, var.config.global.virtual_network.virtual_network_id, local.env_config.virtual_network.address_space, var.config.global.virtual_network.address_space, null) != null }
+
     subnets = { for k in setunion(keys(try(local.env_config.virtual_network.subnets, {})), keys(try(var.config.global.virtual_network.subnets, {}))) : k => {
       subnet_size                                   = try(local.env_config.virtual_network.subnets[k].subnet_size, var.config.global.virtual_network.subnets[k].subnet_size, 28)
       private_endpoint_network_policies             = try(local.env_config.virtual_network.subnets[k].private_endpoint_network_policies, var.config.global.virtual_network.subnets[k].private_endpoint_network_policies, null)
@@ -342,4 +350,41 @@ resource "azurerm_subnet_nat_gateway_association" "this" {
 
   subnet_id      = try(azurerm_subnet.this[local.config.nat_gateway.virtual_network_subnet_id].id, local.config.nat_gateway.virtual_network_subnet_id)
   nat_gateway_id = azurerm_nat_gateway.this[0].id
+}
+
+data "azurerm_virtual_network" "that" {
+  for_each = local.config.virtual_network_peerings
+
+  name                = provider::azurerm::parse_resource_id(each.value.remote_virtual_network_id).resource_name
+  resource_group_name = provider::azurerm::parse_resource_id(each.value.remote_virtual_network_id).resource_group_name
+}
+
+resource "azurerm_virtual_network_peering" "this" {
+  for_each = local.config.virtual_network_peerings
+
+  name                         = each.key
+  resource_group_name          = local.config.resource_group_name
+  virtual_network_name         = azurerm_virtual_network.this[0].name
+  remote_virtual_network_id    = each.value.remote_virtual_network_id
+  allow_virtual_network_access = each.value.allow_virtual_network_access
+  allow_forwarded_traffic      = each.value.allow_forwarded_traffic
+
+  triggers = {
+    remote_address_space = join(",", data.azurerm_virtual_network.that[each.key].address_space)
+  }
+}
+
+resource "azurerm_virtual_network_peering" "that" {
+  for_each = local.config.virtual_network_peerings
+
+  name                         = azurerm_virtual_network.this[0].name
+  resource_group_name          = data.azurerm_virtual_network.that[each.key].resource_group_name
+  virtual_network_name         = data.azurerm_virtual_network.that[each.key].name
+  remote_virtual_network_id    = azurerm_virtual_network.this[0].id
+  allow_virtual_network_access = each.value.remote_allow_virtual_network_access
+  allow_forwarded_traffic      = each.value.remote_allow_forwarded_traffic
+
+  triggers = {
+    remote_address_space = join(",", azurerm_virtual_network.this[0].address_space)
+  }
 }
