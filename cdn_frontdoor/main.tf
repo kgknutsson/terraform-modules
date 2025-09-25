@@ -621,6 +621,7 @@ resource "azurerm_cdn_frontdoor_firewall_policy" "this" {
         for_each = [
           for i in custom_rule.value.match_conditions : merge(
             {
+              match_values       = []
               selector           = null
               negation_condition = false
               transforms         = []
