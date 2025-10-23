@@ -160,15 +160,23 @@ resource "azurerm_private_dns_zone" "this" {
 resource "azurerm_private_dns_zone_virtual_network_link" "this" {
   for_each = merge([
     for k, v in azurerm_private_dns_zone.this : merge(
-      {
-        join("_", [k, try(azurerm_virtual_network.this[0], data.azurerm_virtual_network.this[0]).name]) = {
-          name                  = try(azurerm_virtual_network.this[0], data.azurerm_virtual_network.this[0]).name
-          virtual_network_id    = try(azurerm_virtual_network.this[0], data.azurerm_virtual_network.this[0]).id
+      length(local.config.address_space) > 0 ? {
+        format("%s_%s-%s-%s", k, "vnet", local.config.name, var.environment) = {
+          name                  = azurerm_virtual_network.this[0].name
+          virtual_network_id    = azurerm_virtual_network.this[0].id
           private_dns_zone_name = k
           registration_enabled  = null
           resolution_policy     = null
         }
-      },
+      } : length(data.azurerm_virtual_network.this) > 0 ? {
+        join("_", [k, data.azurerm_virtual_network.this[0].name]) = {
+          name                  = data.azurerm_virtual_network.this[0].name
+          virtual_network_id    = data.azurerm_virtual_network.this[0].id
+          private_dns_zone_name = k
+          registration_enabled  = null
+          resolution_policy     = null
+        }
+      } : {},
       {
         for i in try(local.config.private_dns_zones[k].virtual_network_links, []) : join("_", [k, provider::azurerm::parse_resource_id(try(i.id, i)).resource_name]) => {
           name                  = provider::azurerm::parse_resource_id(try(i.id, i)).resource_name
