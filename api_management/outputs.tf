@@ -1,3 +1,13 @@
+output "id" {
+  value = try(azurerm_api_management.this[0].id, data.azurerm_api_management.this[0].id, null)
+  description = "Id of the API Management instance."
+}
+
+output "location" {
+  value       = try(azurerm_api_management.this[0].location, data.azurerm_api_management.this[0].location, null)
+  description = "Location of the API Management instance."
+}
+
 output "public_ip_addresses" {
   value       = try(azurerm_api_management.this[0].public_ip_addresses, data.azurerm_api_management.this[0].public_ip_addresses, null)
   description = "Public IP addresses"
