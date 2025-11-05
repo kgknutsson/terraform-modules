@@ -43,7 +43,7 @@ variable "tags" {
 
 variable "resource_group" {
   type        = object({
-    id       = string
+    id       = optional(string)
     name     = string
     location = string
   })
