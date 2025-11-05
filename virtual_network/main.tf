@@ -89,13 +89,6 @@ resource "azurerm_virtual_network" "this" {
   address_space       = local.config.address_space
 }
 
-data "azurerm_virtual_network" "this" {
-  count = length(local.config.virtual_network_id[*])
-
-  name                = split("/", local.config.virtual_network_id)[8]
-  resource_group_name = split("/", local.config.virtual_network_id)[4]
-}
-
 module "subnet_addrs" {
   source  = "hashicorp/subnets/cidr"
   version = "1.0.0"
@@ -107,7 +100,7 @@ module "subnet_addrs" {
 }
 
 resource "azurecaf_name" "subnet" {
-  for_each = { for k, v in local.config.subnets : k => v if max(length(local.config.address_space), length(data.azurerm_virtual_network.this)) > 0 }
+  for_each = { for k, v in local.config.subnets : k => v if length(local.config.address_space) > 0 }
 
   name          = each.key
   resource_type = "azurerm_subnet"
@@ -118,7 +111,7 @@ resource "azurerm_subnet" "this" {
 
   name                                          = azurecaf_name.subnet[each.key].result
   resource_group_name                           = local.config.resource_group_name
-  virtual_network_name                          = azurerm_virtual_network.this.0.name
+  virtual_network_name                          = azurerm_virtual_network.this[0].name
   address_prefixes                              = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
   private_endpoint_network_policies             = each.value.private_endpoint_network_policies
   private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
@@ -136,14 +129,6 @@ resource "azurerm_subnet" "this" {
       }
     }
   }
-}
-
-data "azurerm_subnet" "this" {
-  for_each = { for k, v in local.config.subnets : k => v if length(data.azurerm_virtual_network.this) > 0 }
-
-  name                 = azurecaf_name.subnet[each.key].result
-  resource_group_name  = data.azurerm_virtual_network.this.0.resource_group_name
-  virtual_network_name = data.azurerm_virtual_network.this.0.name
 }
 
 resource "azurerm_private_dns_zone" "this" {
@@ -168,10 +153,10 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
           registration_enabled  = null
           resolution_policy     = null
         }
-      } : length(data.azurerm_virtual_network.this) > 0 ? {
-        join("_", [k, data.azurerm_virtual_network.this[0].name]) = {
-          name                  = data.azurerm_virtual_network.this[0].name
-          virtual_network_id    = data.azurerm_virtual_network.this[0].id
+      } : local.config.virtual_network_id != null ? {
+        join("_", [k, provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name]) = {
+          name                  = provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name
+          virtual_network_id    = local.config.virtual_network_id
           private_dns_zone_name = k
           registration_enabled  = null
           resolution_policy     = null
@@ -216,7 +201,7 @@ resource "azurerm_private_endpoint" "this" {
   name                = azurecaf_name.private_endpoint[each.key].result
   location            = local.config.location
   resource_group_name = local.config.resource_group_name
-  subnet_id           = try(azurerm_subnet.this[each.value.subnet_key].id, data.azurerm_subnet.this[each.value.subnet_key].id)
+  subnet_id           = try(azurerm_subnet.this[each.value.subnet_key].id, join("/", [local.config.virtual_network_id, "subnets", each.value.subnet_key]))
   tags                = local.config.tags
 
   private_dns_zone_group {

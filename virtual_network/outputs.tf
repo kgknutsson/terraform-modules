@@ -1,10 +1,10 @@
 output "id" {
-  value       = try(azurerm_virtual_network.this.0.id, data.azurerm_virtual_network.this.0.id, null)
+  value       = try(azurerm_virtual_network.this[0].id, local.config.virtual_network_id)
   description = "Id of the virtual network."
 }
 
 output "subnet" {
-  value       = try(azurerm_virtual_network.this.0.subnet, data.azurerm_virtual_network.this.0.subnets, toset([]))
+  value       = try(azurerm_virtual_network.this[0].subnet, toset([]))
   description = "List of subnets within the virtual network."
 }
 
