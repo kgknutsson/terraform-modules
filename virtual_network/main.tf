@@ -89,6 +89,13 @@ resource "azurerm_virtual_network" "this" {
   address_space       = local.config.address_space
 }
 
+data "azurerm_virtual_network" "this" {
+  count = length(local.config.virtual_network_id[*])
+
+  name                = split("/", local.config.virtual_network_id)[8]
+  resource_group_name = split("/", local.config.virtual_network_id)[4]
+}
+
 module "subnet_addrs" {
   source  = "hashicorp/subnets/cidr"
   version = "1.0.0"
@@ -201,7 +208,7 @@ resource "azurerm_private_endpoint" "this" {
   name                = azurecaf_name.private_endpoint[each.key].result
   location            = local.config.location
   resource_group_name = local.config.resource_group_name
-  subnet_id           = try(azurerm_subnet.this[each.value.subnet_key].id, join("/", [local.config.virtual_network_id, "subnets", each.value.subnet_key]))
+  subnet_id           = try(azurerm_subnet.this[each.value.subnet_key].id, join("/", [local.config.virtual_network_id, "subnets", contains(data.azurerm_virtual_network.this[0].subnets, each.value.subnet_key) ? each.value.subnet_key : join("-", ["snet", each.value.subnet_key])]))
   tags                = local.config.tags
 
   private_dns_zone_group {
