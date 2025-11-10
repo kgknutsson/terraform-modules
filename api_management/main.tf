@@ -147,7 +147,7 @@ locals {
           user_id         = null
           primary_key     = null
           secondary_key   = null
-          state           = null
+          state           = "active"
           subscription_id = null
           allow_tracing   = null
         },
