@@ -24,12 +24,11 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
     }
   }
 
-  dynamic "metric" {
-    for_each = local.config.monitor_diagnostic_setting.metrics
+  dynamic "enabled_metric" {
+    for_each = local.config.monitor_diagnostic_setting.enabled_metrics
 
     content {
-      category = try(metric.value.category, metric.value)
-      enabled  = try(metric.value.enabled, true)
+      category = try(enabled_metric.value.category, enabled_metric.value)
     }
   }
 }

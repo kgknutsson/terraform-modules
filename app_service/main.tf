@@ -81,11 +81,11 @@ locals {
         )
         : i if i != null
       ]
-      metrics = [
+      enabled_metrics = [
         for i in coalescelist(
           concat(
-            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.metrics]),  []),
-            try(flatten([local.env_config.app_service.monitor_diagnostic_setting.metrics]), [])
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_metrics]),  []),
+            try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_metrics]), [])
           ),
           [
             { category = "AllMetrics" }
