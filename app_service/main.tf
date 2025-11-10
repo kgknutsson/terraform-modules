@@ -76,7 +76,7 @@ locals {
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_logs]), [])
           ),
           [
-            try(local.env_config.app_service.type, var.config.global.app_service.type, null) == "FunctionApp" ? { category = "FunctionAppLogs" } : { category_group = "allLogs" }
+            try(local.env_config.app_service.type, var.config.global.app_service.type, null) == "FunctionApp" ? { category = "AppServiceAuthenticationLogs" } : { category_group = "audit" }
           ]
         )
         : i if i != null
