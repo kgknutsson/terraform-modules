@@ -1,3 +1,5 @@
+data "azurerm_subscription" "this" {}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
@@ -8,9 +10,12 @@ locals {
 
     tags = merge(
       {
-        application = var.config.global.name
-        environment = var.environment
-        terraform   = "true"
+        for k, v in data.azurerm_subscription.this.tags : k => v if contains(["billing_contact_email", "technical_contact_email"], k)
+      },
+      {
+        environment  = var.environment
+        service_name = var.config.global.name
+        tooling      = "Terraform"
       },
       var.tags,
       try(var.config.global.tags, {}),
