@@ -7,3 +7,8 @@ output "system_assigned_identity_principal_id" {
   value       = try(azurerm_linux_virtual_machine_scale_set.this[0].identity[0].principal_id, null)
   description = "System assigned identity principal id."
 }
+
+output "virtual_machine_scale_set_id" {
+  value = azurerm_linux_virtual_machine_scale_set.this[0].id
+  description = "The resource ID of the VMSS."
+}
