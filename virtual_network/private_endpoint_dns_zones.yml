@@ -19,3 +19,4 @@ hybridcompute:
   - privatelink.dp.kubernetesconfiguration.azure.com
 sites: privatelink.azurewebsites.net
 Sql: privatelink.documents.azure.com
+Gateway: privatelink.azure-api.net
