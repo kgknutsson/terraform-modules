@@ -33,6 +33,7 @@ locals {
         public_ip_allocation_method = "Static"
         zones                       = null
         virtual_network_subnet_id   = null
+        virtual_network_subnet_ids  = null
       },
       i
     ) if try(i.sku_name, null) != null]), null)
@@ -354,9 +355,9 @@ resource "azurerm_nat_gateway_public_ip_association" "this" {
 }
 
 resource "azurerm_subnet_nat_gateway_association" "this" {
-  count = length(try(local.config.nat_gateway.virtual_network_subnet_id[*], []))
+  for_each = toset(try(local.config.nat_gateway.virtual_network_subnet_ids == null ? local.config.nat_gateway.virtual_network_subnet_id[*] : flatten([local.config.nat_gateway.virtual_network_subnet_ids]), []))
 
-  subnet_id      = try(azurerm_subnet.this[local.config.nat_gateway.virtual_network_subnet_id].id, local.config.nat_gateway.virtual_network_subnet_id)
+  subnet_id      = try(azurerm_subnet.this[each.key].id, each.key)
   nat_gateway_id = azurerm_nat_gateway.this[0].id
 }
 
