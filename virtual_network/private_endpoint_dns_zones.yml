@@ -3,8 +3,10 @@ file: privatelink.file.core.windows.net
 queue: privatelink.queue.core.windows.net
 table: privatelink.table.core.windows.net
 mysqlServer: privatelink.mysql.database.azure.com
+postgresqlServer: privatelink.postgres.database.azure.com
 namespace: privatelink.servicebus.windows.net
 redisCache: privatelink.redis.cache.windows.net
+registry: privatelink.azurecr.io
 sqlServer: privatelink.database.windows.net
 vault: privatelink.vaultcore.azure.net
 azuremonitor:
@@ -19,3 +21,4 @@ hybridcompute:
   - privatelink.dp.kubernetesconfiguration.azure.com
 sites: privatelink.azurewebsites.net
 Sql: privatelink.documents.azure.com
+Gateway: privatelink.azure-api.net
