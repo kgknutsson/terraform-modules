@@ -74,7 +74,7 @@ locals {
 
   subresource_dns_zone_map = yamldecode(file("${path.module}/private_endpoint_dns_zones.yml"))
   subresource_names        = flatten([for k, v in local.config.subnets : [for i in v.private_endpoints : i.subresource_names if try(i.private_dns_zone_group.private_dns_zone_ids, null) == null]])
-  private_dns_zones        = flatten(values({ for k, v in local.subresource_dns_zone_map : k => v... if contains(local.subresource_names, k) }))
+  private_dns_zones        = flatten(values({ for k, v in local.subresource_dns_zone_map : k => v... if anytrue([for i in local.subresource_names : i == k || (startswith(i, trimsuffix(k, "*")) && endswith(k, "*"))]) }))
 }
 
 resource "azurecaf_name" "virtual_network" {
@@ -218,8 +218,11 @@ resource "azurerm_private_endpoint" "this" {
   tags                = local.config.tags
 
   private_dns_zone_group {
-    name                 = try(each.value.private_dns_zone_group.name, each.value.private_dns_zone_group, "default")
-    private_dns_zone_ids = try([for i in each.value.private_dns_zone_group.private_dns_zone_ids : try(azurerm_private_dns_zone.this[i].id, i)], compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if contains(flatten([each.value.subresource_names]), k)])))
+    name = try(each.value.private_dns_zone_group.name, each.value.private_dns_zone_group, "default")
+    private_dns_zone_ids = try(
+      [for i in each.value.private_dns_zone_group.private_dns_zone_ids : try(azurerm_private_dns_zone.this[i].id, i)],
+      compact(flatten([for k, v in local.subresource_dns_zone_map : [for i in flatten([v]) : try(azurerm_private_dns_zone.this[i].id, null)] if anytrue([for ii in flatten([each.value.subresource_names]) : ii == k || (startswith(ii, trimsuffix(k, "*")) && endswith(k, "*"))])]))
+    )
   }
 
   private_service_connection {
