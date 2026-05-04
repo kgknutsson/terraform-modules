@@ -9,6 +9,7 @@ redisCache: privatelink.redis.cache.windows.net
 registry: privatelink.azurecr.io
 sqlServer: privatelink.database.windows.net
 vault: privatelink.vaultcore.azure.net
+account: privatelink.cognitiveservices.azure.com
 azuremonitor:
   - privatelink.monitor.azure.com
   - privatelink.oms.opinsights.azure.com
