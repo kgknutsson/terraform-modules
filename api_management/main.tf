@@ -466,7 +466,7 @@ resource "azurerm_api_management_api_operation" "this" {
     for k, v in local.config.apis : {
       for i in coalescelist(
         keys(v.operations),
-        ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
+        ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
       ) : join("_", [k, i]) => merge(
         {
           api_name            = k
