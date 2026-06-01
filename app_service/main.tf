@@ -1856,7 +1856,7 @@ resource "azurerm_function_app_connection" "this" {
       for k, v in local.config.service_connections : k => merge(
         {
           name            = k
-          function_app_id = try(azurerm_linux_function_app.this.0, azurerm_windows_function_app.this.0).id
+          function_app_id = try(azurerm_linux_function_app.this.0, azurerm_windows_function_app.this.0, azapi_resource.flex_function.0).id
         },
         v
       ) if local.config.type == "FunctionApp"
