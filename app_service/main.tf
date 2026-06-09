@@ -4,6 +4,7 @@ locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
+    name                = var.config.global.name
     location            = var.resource_group.location
     resource_group_name = var.resource_group.name
 
