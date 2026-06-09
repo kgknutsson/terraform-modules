@@ -1,13 +1,14 @@
+data "azurerm_subscription" "this" {}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
   config = {
-    name                = var.config.global.name
     location            = var.resource_group.location
     resource_group_name = var.resource_group.name
 
     naming = {
-      for i in ["azurerm_service_plan", "azurerm_application_insights", "azurerm_monitor_private_link_scope", "azurerm_app_service"] : i => merge(
+      for i in ["azurerm_service_plan", "azurerm_application_insights", "azurerm_monitor_private_link_scope", "azurerm_app_service", "azurerm_user_assigned_identity"] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -22,9 +23,12 @@ locals {
 
     tags = merge(
       {
-        application = var.config.global.name
-        environment = var.environment
-        terraform   = "true"
+        for k, v in data.azurerm_subscription.this.tags : k => v if contains(["billing_contact_email", "technical_contact_email"], k)
+      },
+      {
+        environment  = var.environment
+        service_name = var.config.global.name
+        tooling      = "Terraform"
       },
       var.tags,
       try(var.config.global.tags, {}),
@@ -449,13 +453,16 @@ resource "azurerm_monitor_private_link_scoped_service" "this" {
 resource "azurecaf_name" "user_assigned_identity" {
   count = try(endswith(local.config.identity.type, "UserAssigned"), false) && length(local.config.identity.identity_ids) == 0 ? 1 : 0
 
-  name          = local.config.name
+  name          = local.config.naming["azurerm_user_assigned_identity"].name
   resource_type = "azurerm_user_assigned_identity"
-  suffixes      = [var.environment]
+  prefixes      = local.config.naming["azurerm_user_assigned_identity"].prefixes
+  suffixes      = local.config.naming["azurerm_user_assigned_identity"].suffixes
+  random_length = local.config.naming["azurerm_user_assigned_identity"].random_length
+  use_slug      = local.config.naming["azurerm_user_assigned_identity"].use_slug
 }
 
 resource "azurerm_user_assigned_identity" "this" {
-  count = length(azurecaf_name.user_assigned_identity)
+  count = try(endswith(local.config.identity.type, "UserAssigned"), false) && length(local.config.identity.identity_ids) == 0 ? 1 : 0
 
   name                = azurecaf_name.user_assigned_identity.0.result
   resource_group_name = local.config.resource_group_name
