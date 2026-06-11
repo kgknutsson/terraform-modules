@@ -199,7 +199,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
@@ -284,7 +284,7 @@ resource "azurerm_monitor_metric_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
