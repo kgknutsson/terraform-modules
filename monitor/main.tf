@@ -22,12 +22,14 @@ locals {
     log_analytics_workspace_id = try(local.env_config.monitor.log_analytics_workspace_id, var.config.global.monitor.log_analytics_workspace_id, null)
     default_action_group_ids   = concat(try(local.env_config.monitor.default_action_group_ids, []), try(var.config.global.monitor.default_action_group_ids, []))
 
-    autoscale_settings = length(var.monitor_config.autoscale_settings) > 0 ? var.monitor_config.autoscale_settings : concat(
+    autoscale_settings = concat(
+      var.monitor_config.autoscale_settings,
       try(var.config.global.monitor.autoscale_settings, []),
       try(local.env_config.monitor.autoscale_settings, [])
     )
 
-    diagnostic_settings = length(var.monitor_config.diagnostic_settings) > 0 ? var.monitor_config.diagnostic_settings : concat(
+    diagnostic_settings = concat(
+      var.monitor_config.diagnostic_settings,
       try(var.config.global.monitor.diagnostic_settings, []),
       try(local.env_config.monitor.diagnostic_settings, [])
     )
@@ -37,12 +39,14 @@ locals {
       try(local.env_config.monitor.action_groups, {})
     )
 
-    activity_log_alerts = length(var.monitor_config.activity_log_alerts) > 0 ? var.monitor_config.activity_log_alerts : concat(
+    activity_log_alerts = concat(
+      var.monitor_config.activity_log_alerts,
       try(var.config.global.monitor.activity_log_alerts, []),
       try(local.env_config.monitor.activity_log_alerts, [])
     )
 
-    metric_alerts = length(var.monitor_config.metric_alerts) > 0 ? var.monitor_config.metric_alerts : concat(
+    metric_alerts = concat(
+      var.monitor_config.metric_alerts,
       try(var.config.global.monitor.metric_alerts, []),
       try(local.env_config.monitor.metric_alerts, [])
     )
