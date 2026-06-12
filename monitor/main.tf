@@ -22,20 +22,16 @@ locals {
     log_analytics_workspace_id = try(local.env_config.monitor.log_analytics_workspace_id, var.config.global.monitor.log_analytics_workspace_id, null)
     default_action_group_ids   = concat(try(local.env_config.monitor.default_action_group_ids, []), try(var.config.global.monitor.default_action_group_ids, []))
 
-    autoscale_settings = coalesce(
+    autoscale_settings = concat(
       var.monitor_config.autoscale_settings,
-      concat(
-        try(var.config.global.monitor.autoscale_settings, []),
-        try(local.env_config.monitor.autoscale_settings, [])
-      )
+      try(var.config.global.monitor.autoscale_settings, []),
+      try(local.env_config.monitor.autoscale_settings, [])
     )
 
-    diagnostic_settings = coalesce(
+    diagnostic_settings = concat(
       var.monitor_config.diagnostic_settings,
-      concat(
-        try(var.config.global.monitor.diagnostic_settings, []),
-        try(local.env_config.monitor.diagnostic_settings, [])
-      )
+      try(var.config.global.monitor.diagnostic_settings, []),
+      try(local.env_config.monitor.diagnostic_settings, [])
     )
 
     action_groups = merge(
@@ -43,20 +39,16 @@ locals {
       try(local.env_config.monitor.action_groups, {})
     )
 
-    activity_log_alerts = coalesce(
+    activity_log_alerts = concat(
       var.monitor_config.activity_log_alerts,
-      concat(
-        try(var.config.global.monitor.activity_log_alerts, []),
-        try(local.env_config.monitor.activity_log_alerts, [])
-      )
+      try(var.config.global.monitor.activity_log_alerts, []),
+      try(local.env_config.monitor.activity_log_alerts, [])
     )
 
-    metric_alerts = coalesce(
+    metric_alerts = concat(
       var.monitor_config.metric_alerts,
-      concat(
-        try(var.config.global.monitor.metric_alerts, []),
-        try(local.env_config.monitor.metric_alerts, [])
-      )
+      try(var.config.global.monitor.metric_alerts, []),
+      try(local.env_config.monitor.metric_alerts, [])
     )
   }
 }
@@ -207,7 +199,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
@@ -292,7 +284,7 @@ resource "azurerm_monitor_metric_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(each.value.action, [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
