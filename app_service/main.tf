@@ -299,6 +299,8 @@ locals {
       try(local.env_config.app_service.hybrid_connections, {})
     )
 
+    auth_settings_v2 = try(local.env_config.app_service.auth_settings_v2, var.config.global.app_service.auth_settings_v2, null)
+
     database = {
       server_fqdn     = try(local.env_config.database.server_fqdn, var.config.global.database.server_fqdn, null)
       server_port     = try(local.env_config.database.server_port, var.config.global.database.server_port, 1433)
@@ -660,6 +662,53 @@ resource "azurerm_linux_web_app" "this" {
     }
   }
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in local.config.auth_settings_v2[*] : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       logs,
@@ -847,6 +896,53 @@ resource "azurerm_linux_web_app_slot" "this" {
     local.app_settings,
     try(each.value.app_settings, {})
   )
+
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in try(each.value.auth_settings_v2[*], local.config.auth_settings_v2[*]) : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
 
   lifecycle {
     ignore_changes = [
@@ -1050,6 +1146,53 @@ resource "azurerm_windows_web_app" "this" {
     }
   }
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in local.config.auth_settings_v2[*] : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       logs,
@@ -1246,6 +1389,53 @@ resource "azurerm_windows_web_app_slot" "this" {
     try(each.value.app_settings, {})
   )
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in try(each.value.auth_settings_v2[*], local.config.auth_settings_v2[*]) : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       logs,
@@ -1423,6 +1613,53 @@ resource "azurerm_linux_function_app" "this" {
     }
   }
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in local.config.auth_settings_v2[*] : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       app_settings["AZURE_REDIS_HOST"],
@@ -1564,6 +1801,53 @@ resource "azurerm_linux_function_app_slot" "this" {
     try(each.value.app_settings, {})
   )
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in try(each.value.auth_settings_v2[*], local.config.auth_settings_v2[*]) : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       app_settings["AZURE_REDIS_HOST"],
@@ -1698,6 +1982,53 @@ resource "azurerm_windows_function_app" "this" {
     }
   }
 
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in local.config.auth_settings_v2[*] : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       app_settings["AZURE_REDIS_HOST"],
@@ -1824,6 +2155,53 @@ resource "azurerm_windows_function_app_slot" "this" {
     local.app_settings,
     try(each.value.app_settings, {})
   )
+
+  dynamic "auth_settings_v2" {
+    for_each = [
+      for i in try(each.value.auth_settings_v2[*], local.config.auth_settings_v2[*]) : merge(
+        {
+          auth_enabled           = true
+          require_authentication = true
+          unauthenticated_action = null
+          login = {
+            token_store_enabled = null
+          }
+        },
+        i
+      )
+    ]
+
+    content {
+      auth_enabled           = auth_settings_v2.value.auth_enabled
+      require_authentication = auth_settings_v2.value.require_authentication
+      unauthenticated_action = auth_settings_v2.value.unauthenticated_action
+
+      dynamic "active_directory_v2" {
+        for_each = [
+          for i in auth_settings_v2.value.active_directory_v2[*] : merge(
+            {
+              allowed_applications       = null
+              allowed_audiences          = null
+              client_secret_setting_name = null
+            },
+            i
+          )
+        ]
+
+        content {
+          allowed_applications       = active_directory_v2.value.allowed_applications
+          allowed_audiences          = active_directory_v2.value.allowed_audiences
+          client_id                  = active_directory_v2.value.client_id
+          client_secret_setting_name = active_directory_v2.value.client_secret_setting_name
+          tenant_auth_endpoint       = active_directory_v2.value.tenant_auth_endpoint
+        }
+      }
+
+      login {
+        token_store_enabled = auth_settings_v2.value.login.token_store_enabled
+      }
+    }
+  }
 
   lifecycle {
     ignore_changes = [
