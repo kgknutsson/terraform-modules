@@ -13,7 +13,7 @@ locals {
         "azurerm_cdn_frontdoor_endpoint",
         "azurerm_cdn_frontdoor_firewall_policy",
         "azurerm_cdn_frontdoor_security_policy",
-      ] : i => merge(
+        ] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -45,12 +45,12 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.custom_domains), []),
         try(keys(var.config.global.cdn_frontdoor.custom_domains), [])
-      ) : k => try(
+        ) : k => try(
         local.env_config.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id,
         var.config.global.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id
-      ) if can(try(
-        local.env_config.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id,
-        var.config.global.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id
+        ) if can(try(
+          local.env_config.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id,
+          var.config.global.cdn_frontdoor.custom_domains[k].tls.key_vault_certificate_id
       ))
     }
 
@@ -60,9 +60,9 @@ locals {
         try(keys(var.config.global.cdn_frontdoor.custom_domains), []),
         try(keys(local.env_config.cdn_frontdoor.rule_sets["redirects"]), []),
         try(keys(var.config.global.cdn_frontdoor.rule_sets["redirects"]), []),
-        flatten([ for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : try(v.custom_domains, []) ]),
-        flatten([ for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : try(v.custom_domains, []) ])
-      ) : replace(k, ".", "-") => merge(
+        flatten([for k, v in try(local.env_config.cdn_frontdoor.routes, {}) : try(v.custom_domains, [])]),
+        flatten([for k, v in try(var.config.global.cdn_frontdoor.routes, {}) : try(v.custom_domains, [])])
+        ) : replace(k, ".", "-") => merge(
         {
           host_name = try(local.env_config.cdn_frontdoor.custom_domains[k], var.config.global.cdn_frontdoor.custom_domains[k], null) == null ? k : replace(k, "-", ".")
         },
@@ -85,7 +85,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.endpoints), local.env_config.cdn_frontdoor.endpoints, []),
         try(keys(var.config.global.cdn_frontdoor.endpoints), var.config.global.cdn_frontdoor.endpoints, []),
-      ) : k => {
+        ) : k => {
         enabled = try(
           local.env_config.cdn_frontdoor.endpoints[k].enabled,
           local.env_config.cdn_frontdoor.endpoints[k],
@@ -100,9 +100,9 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.origin_groups), []),
         try(keys(var.config.global.cdn_frontdoor.origin_groups), []),
-        [ for k, v in try(local.env_config.cdn_frontdoor.origins, {}) : v.origin_group if can(v.origin_group) ],
-        [ for k, v in try(var.config.global.cdn_frontdoor.origins, {}) : v.origin_group if can(v.origin_group) ]
-      ) : k => merge(
+        [for k, v in try(local.env_config.cdn_frontdoor.origins, {}) : v.origin_group if can(v.origin_group)],
+        [for k, v in try(var.config.global.cdn_frontdoor.origins, {}) : v.origin_group if can(v.origin_group)]
+        ) : k => merge(
         {
           restore_traffic_time_to_healed_or_new_endpoint_in_minutes = null // Value between 0 and 50 minutes, defaults to 10
           session_affinity_enabled                                  = null // Defaults to true
@@ -128,7 +128,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.origins), []),
         try(keys(var.config.global.cdn_frontdoor.origins), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           origin_group                   = null
           host_name                      = null
@@ -150,7 +150,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.rule_sets), []),
         try(keys(var.config.global.cdn_frontdoor.rule_sets), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           for x, y in merge(
             try(local.env_config.cdn_frontdoor.rule_sets[k], {}),
@@ -163,7 +163,7 @@ locals {
               try(local.env_config.cdn_frontdoor.rule_sets[k], {}),
               try(var.config.global.cdn_frontdoor.rule_sets[k], {})
             ) : n => regex("^(?P<redirect_protocol>[^:/?#]+)://(?P<destination_hostname>[^/?#]*)(?P<destination_path>[^?#]*)?[?]?(?P<query_string>[^#]*)?#?(?P<destination_fragment>.*)?", m) if k == "redirects"
-          } : replace(x, ".", "-") => {
+            } : replace(x, ".", "-") => {
             actions = {
               url_redirect_action = {
                 redirect_type        = "Moved"
@@ -188,7 +188,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.routes), []),
         try(keys(var.config.global.cdn_frontdoor.routes), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           endpoint               = null
           origin_group           = null
@@ -213,10 +213,10 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.firewall_policies), []),
         try(keys(var.config.global.cdn_frontdoor.firewall_policies), [])
-      ) : k => merge(
+        ) : k => merge(
         {
-          sku_name      = null
-          mode          = null
+          sku_name = null
+          mode     = null
         },
         try(local.env_config.cdn_frontdoor.firewall_policies[k], {}),
         try(var.config.global.cdn_frontdoor.firewall_policies[k], {}),
@@ -225,7 +225,7 @@ locals {
             for i in concat(
               try(local.env_config.cdn_frontdoor.firewall_policies[k].custom_rules, []),
               try(var.config.global.cdn_frontdoor.firewall_policies[k].custom_rules, [])
-            ) : merge(
+              ) : merge(
               {
                 enabled                        = true
                 priority                       = null
@@ -240,7 +240,7 @@ locals {
             for i in concat(
               try(local.env_config.cdn_frontdoor.firewall_policies[k].managed_rules, []),
               try(var.config.global.cdn_frontdoor.firewall_policies[k].managed_rules, [])
-            ) : merge(
+              ) : merge(
               {
                 exclusions = []
                 overrides  = []
@@ -256,7 +256,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.cdn_frontdoor.security_policies), []),
         try(keys(var.config.global.cdn_frontdoor.security_policies), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           name              = null
           firewall_policy   = null
@@ -375,9 +375,9 @@ resource "azurerm_cdn_frontdoor_origin_group" "this" {
       for i in each.value.health_probe[*] : merge(
         {
           protocol            = "Https" // Http or Https
-          interval_in_seconds = 30 // Value between 5 and 31536000 seconds
-          request_type        = null // HEAD or GET, defaults to HEAD
-          path                = null // Defaults to "/"
+          interval_in_seconds = 30      // Value between 5 and 31536000 seconds
+          request_type        = null    // HEAD or GET, defaults to HEAD
+          path                = null    // Defaults to "/"
         },
         i
       )
@@ -428,7 +428,7 @@ resource "azurerm_cdn_frontdoor_origin" "this" {
 }
 
 resource "azurerm_cdn_frontdoor_rule_set" "this" {
-  for_each = toset([ for k, v in local.config.rule_sets : k if length(local.config.sku_name[*]) > 0 ])
+  for_each = toset([for k, v in local.config.rule_sets : k if length(local.config.sku_name[*]) > 0])
 
   name                     = each.key
   cdn_frontdoor_profile_id = azurerm_cdn_frontdoor_profile.this[0].id
@@ -545,9 +545,9 @@ resource "azurerm_cdn_frontdoor_route" "this" {
   name                            = each.key
   cdn_frontdoor_endpoint_id       = azurerm_cdn_frontdoor_endpoint.this[each.value.endpoint].id
   cdn_frontdoor_origin_group_id   = replace(azurerm_cdn_frontdoor_origin_group.this[each.value.origin_group].id, "resourcegroups", "resourceGroups")
-  cdn_frontdoor_origin_ids        = [ for k, v in azurerm_cdn_frontdoor_origin.this : v.id if contains(each.value.origins, k) ]
-  cdn_frontdoor_rule_set_ids      = [ for k, v in azurerm_cdn_frontdoor_rule_set.this : v.id if contains(each.value.rule_sets, k) ]
-  cdn_frontdoor_custom_domain_ids = [ for k, v in azurerm_cdn_frontdoor_custom_domain.this : v.id if contains(each.value.custom_domains, k) || contains(each.value.custom_domains, v.host_name) ]
+  cdn_frontdoor_origin_ids        = [for k, v in azurerm_cdn_frontdoor_origin.this : v.id if contains(each.value.origins, k)]
+  cdn_frontdoor_rule_set_ids      = [for k, v in azurerm_cdn_frontdoor_rule_set.this : v.id if contains(each.value.rule_sets, k)]
+  cdn_frontdoor_custom_domain_ids = [for k, v in azurerm_cdn_frontdoor_custom_domain.this : v.id if contains(each.value.custom_domains, k) || contains(each.value.custom_domains, v.host_name)]
   cdn_frontdoor_origin_path       = each.value.origin_path
   enabled                         = each.value.enabled
   forwarding_protocol             = each.value.forwarding_protocol
@@ -579,10 +579,10 @@ resource "azurerm_cdn_frontdoor_route" "this" {
 }
 
 resource "azurerm_cdn_frontdoor_custom_domain_association" "this" {
-  for_each = transpose({ for k, v in local.config.routes : k => [ for i in v.custom_domains : replace(i, ".", "-") ] if length(local.config.sku_name[*]) > 0 })
+  for_each = transpose({ for k, v in local.config.routes : k => [for i in v.custom_domains : replace(i, ".", "-")] if length(local.config.sku_name[*]) > 0 })
 
   cdn_frontdoor_custom_domain_id = azurerm_cdn_frontdoor_custom_domain.this[each.key].id
-  cdn_frontdoor_route_ids        = [ for i in each.value : azurerm_cdn_frontdoor_route.this[i].id ]
+  cdn_frontdoor_route_ids        = [for i in each.value : azurerm_cdn_frontdoor_route.this[i].id]
 }
 
 resource "azurecaf_name" "cdn_frontdoor_firewall_policy" {

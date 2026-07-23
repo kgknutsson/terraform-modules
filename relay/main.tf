@@ -22,7 +22,7 @@ locals {
     naming = {
       for i in [
         "azurerm_relay_namespace",
-      ] : i => merge(
+        ] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -39,7 +39,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.relay.namespaces), []),
         try(keys(var.config.global.relay.namespaces), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           sku_name            = "Standard"
           authorization_rules = {}
@@ -57,12 +57,12 @@ locals {
 resource "azurecaf_name" "relay_namespace" {
   for_each = local.config.namespaces
 
-  name           = local.config.naming["azurerm_relay_namespace"].name
+  name          = local.config.naming["azurerm_relay_namespace"].name
   resource_type = "azurerm_relay_namespace"
-  prefixes       = local.config.naming["azurerm_relay_namespace"].prefixes
-  suffixes       = concat(local.config.naming["azurerm_relay_namespace"].suffixes, [each.key])
-  random_length  = local.config.naming["azurerm_relay_namespace"].random_length
-  use_slug       = local.config.naming["azurerm_relay_namespace"].use_slug
+  prefixes      = local.config.naming["azurerm_relay_namespace"].prefixes
+  suffixes      = concat(local.config.naming["azurerm_relay_namespace"].suffixes, [each.key])
+  random_length = local.config.naming["azurerm_relay_namespace"].random_length
+  use_slug      = local.config.naming["azurerm_relay_namespace"].use_slug
 }
 
 resource "azurerm_relay_namespace" "this" {
@@ -108,7 +108,7 @@ resource "azurerm_relay_hybrid_connection" "this" {
         requires_client_authorization = null
 
         user_metadata = try(
-          jsonencode([ for k, v in y.user_metadata : { key = k , value = v } ]),
+          jsonencode([for k, v in y.user_metadata : { key = k, value = v }]),
           null
         )
       }

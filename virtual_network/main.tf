@@ -109,7 +109,7 @@ module "subnet_addrs" {
   count = length(local.config.address_space)
 
   base_cidr_block = local.config.address_space.0
-  networks        = [ for k, v in local.config.subnets : { name = k, new_bits = v.subnet_size - split("/", local.config.address_space.0)[1] } ]
+  networks        = [for k, v in local.config.subnets : { name = k, new_bits = v.subnet_size - split("/", local.config.address_space.0)[1] }]
 }
 
 resource "azurecaf_name" "subnet" {
@@ -125,7 +125,7 @@ resource "azurerm_subnet" "this" {
   name                                          = azurecaf_name.subnet[each.key].result
   resource_group_name                           = local.config.resource_group_name
   virtual_network_name                          = azurerm_virtual_network.this[0].name
-  address_prefixes                              = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
+  address_prefixes                              = [module.subnet_addrs.0.network_cidr_blocks[each.key]]
   private_endpoint_network_policies             = each.value.private_endpoint_network_policies
   private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
   service_endpoints                             = each.value.service_endpoints
@@ -166,7 +166,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
           registration_enabled  = null
           resolution_policy     = null
         }
-      } : local.config.virtual_network_id != null ? {
+        } : local.config.virtual_network_id != null ? {
         join("_", [k, provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name]) = {
           name                  = provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name
           virtual_network_id    = local.config.virtual_network_id
@@ -197,19 +197,19 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
 }
 
 resource "azurecaf_name" "private_endpoint" {
-  for_each = merge([ for k, v in local.config.subnets : {
+  for_each = merge([for k, v in local.config.subnets : {
     for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => regex(".+/(.+)", i.private_connection_resource_id)[0]
-  } if length(v.private_endpoints) > 0 ]...)
-  
+  } if length(v.private_endpoints) > 0]...)
+
   name          = each.value
   resource_type = "azurerm_private_endpoint"
   suffixes      = each.key != each.value ? [each.key, local.config.name] : [local.config.name]
 }
 
 resource "azurerm_private_endpoint" "this" {
-  for_each = merge([ for k, v in local.config.subnets : {
+  for_each = merge([for k, v in local.config.subnets : {
     for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => merge({ subnet_key = k, is_manual_connection = false }, i)
-  } if length(v.private_endpoints) > 0 ]...)
+  } if length(v.private_endpoints) > 0]...)
 
   name                = azurecaf_name.private_endpoint[each.key].result
   location            = local.config.location
@@ -233,14 +233,14 @@ resource "azurerm_private_endpoint" "this" {
   }
 
   lifecycle {
-    replace_triggered_by = [ terraform_data.private_endpoint_replacement_trigger[each.key] ]
+    replace_triggered_by = [terraform_data.private_endpoint_replacement_trigger[each.key]]
   }
 }
 
 resource "terraform_data" "private_endpoint_replacement_trigger" {
-  for_each = merge([ for k, v in local.config.subnets : {
+  for_each = merge([for k, v in local.config.subnets : {
     for i in v.private_endpoints : try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0]) => k
-  } if length(v.private_endpoints) > 0 ]...)
+  } if length(v.private_endpoints) > 0]...)
 
   input = try(azurerm_subnet.this[each.value].address_prefixes, null)
 }
@@ -248,7 +248,7 @@ resource "terraform_data" "private_endpoint_replacement_trigger" {
 resource "azurerm_private_dns_a_record" "this" {
   for_each = merge(flatten([
     for k, v in local.config.subnets : [
-      for i in v.private_endpoints: {
+      for i in v.private_endpoints : {
         for ii in setproduct(i.private_dns_zone_group.private_dns_zone_ids, i.private_dns_a_record_names) : join("_", ii) => {
           zone_name = ii[0]
           name      = ii[1]
@@ -282,7 +282,7 @@ resource "azurerm_network_security_group" "this" {
   tags                = local.config.tags
 
   dynamic "security_rule" {
-    for_each = [ for i, v in local.config.subnets[each.key].security_group_rules : merge({ priority: i * 10 + 100 }, v) ]
+    for_each = [for i, v in local.config.subnets[each.key].security_group_rules : merge({ priority : i * 10 + 100 }, v)]
 
     content {
       name                         = security_rule.value.name
@@ -317,7 +317,7 @@ resource "azurecaf_name" "nat_gateway" {
   resource_type = "general"
   prefixes      = ["ng"]
   suffixes      = [var.environment]
-  
+
 }
 
 resource "azurerm_nat_gateway" "this" {
