@@ -2252,9 +2252,8 @@ resource "azurerm_windows_function_app_slot" "this" {
 resource "azurerm_role_assignment" "storage_blob_data_owner" {
   # Flex Consumption gets its own role assignment (see flex_consumption.tf).
   count = local.config.type == "FunctionApp" && local.config.storage_uses_managed_identity && var.storage_account != null && try(!startswith(local.config.sku_name, "FC"), true) ? 1 : 0
-  # count = local.config.type == "FunctionApp" && local.config.storage_uses_managed_identity && var.storage_account != null && length(azapi_resource.flex_function) == 0 ? 1 : 0
   scope                            = var.storage_account.id
-  role_definition_name             = "Storage Blob Data Owner"
+  role_definition_name             = "Storage Blob Data Contributor"
   principal_id                     = local.function_app_principal_id
   skip_service_principal_aad_check = true
 }

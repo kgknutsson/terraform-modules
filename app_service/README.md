@@ -31,7 +31,7 @@ app_service = {
 }
 ```
 
-When enabled, the module grants the Function App's identity (system-assigned, or the module-managed user-assigned identity if system-assigned is not used) the `Storage Blob Data Owner` role on the `storage_account` passed to the module. This role assignment is only created for Function Apps with `storage_uses_managed_identity = true` and a `storage_account` provided.
+When enabled, the module grants the Function App's identity (system-assigned, or the module-managed user-assigned identity if system-assigned is not used) the `Storage Blob Data Contributor` role on the `storage_account` passed to the module. This role assignment is only created for Function Apps with `storage_uses_managed_identity = true` and a `storage_account` provided.
 
 
 ## Resources
