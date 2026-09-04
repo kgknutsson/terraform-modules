@@ -21,6 +21,10 @@ module "app_service" {
 }
 ```
 
+### Deployment slot Redis settings
+
+When the primary app configures `AZURE_REDIS_PRINCIPALID`, or a `Microsoft.Cache` Service Connector is configured, every deployment slot must explicitly define a non-empty `AZURE_REDIS_PRINCIPALID` in its slot `app_settings`. Service Connector resources target the primary app only, so slots must not rely on inherited Redis identity settings.
+
 ## Resources
 
 [Terraform Azure App Service reference](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service)

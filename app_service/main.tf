@@ -355,6 +355,9 @@ locals {
       ]
     )
   )
+  redis_service_connection_configured = anytrue([
+    for v in values(local.config.service_connections) : lower(try(split("/", v.target_resource_id)[6], "")) == "microsoft.cache"
+  ])
 }
 
 resource "azurecaf_name" "service_plan" {
@@ -946,8 +949,8 @@ resource "azurerm_linux_web_app_slot" "this" {
 
   lifecycle {
     precondition {
-      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
-      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+      condition = !((contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || local.redis_service_connection_configured) && try(trimspace(tostring(each.value.app_settings["AZURE_REDIS_PRINCIPALID"])) == "", true))
+      error_message = "Deployment slot '${each.key}' must explicitly set a non-empty AZURE_REDIS_PRINCIPALID when the primary app or a Redis Service Connector uses Redis authentication."
     }
 
     ignore_changes = [
@@ -1442,8 +1445,8 @@ resource "azurerm_windows_web_app_slot" "this" {
 
   lifecycle {
     precondition {
-      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
-      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+      condition = !((contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || local.redis_service_connection_configured) && try(trimspace(tostring(each.value.app_settings["AZURE_REDIS_PRINCIPALID"])) == "", true))
+      error_message = "Deployment slot '${each.key}' must explicitly set a non-empty AZURE_REDIS_PRINCIPALID when the primary app or a Redis Service Connector uses Redis authentication."
     }
 
     ignore_changes = [
@@ -1858,8 +1861,8 @@ resource "azurerm_linux_function_app_slot" "this" {
 
   lifecycle {
     precondition {
-      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
-      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+      condition = !((contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || local.redis_service_connection_configured) && try(trimspace(tostring(each.value.app_settings["AZURE_REDIS_PRINCIPALID"])) == "", true))
+      error_message = "Deployment slot '${each.key}' must explicitly set a non-empty AZURE_REDIS_PRINCIPALID when the primary app or a Redis Service Connector uses Redis authentication."
     }
 
     ignore_changes = [
@@ -2217,8 +2220,8 @@ resource "azurerm_windows_function_app_slot" "this" {
 
   lifecycle {
     precondition {
-      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
-      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+      condition = !((contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || local.redis_service_connection_configured) && try(trimspace(tostring(each.value.app_settings["AZURE_REDIS_PRINCIPALID"])) == "", true))
+      error_message = "Deployment slot '${each.key}' must explicitly set a non-empty AZURE_REDIS_PRINCIPALID when the primary app or a Redis Service Connector uses Redis authentication."
     }
 
     ignore_changes = [
