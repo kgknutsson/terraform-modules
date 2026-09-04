@@ -945,6 +945,11 @@ resource "azurerm_linux_web_app_slot" "this" {
   }
 
   lifecycle {
+    precondition {
+      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
+      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+    }
+
     ignore_changes = [
       logs,
       app_settings["AZURE_REDIS_HOST"],
@@ -1436,6 +1441,11 @@ resource "azurerm_windows_web_app_slot" "this" {
   }
 
   lifecycle {
+    precondition {
+      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
+      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+    }
+
     ignore_changes = [
       logs,
       app_settings["AZURE_REDIS_HOST"],
@@ -1847,6 +1857,11 @@ resource "azurerm_linux_function_app_slot" "this" {
   }
 
   lifecycle {
+    precondition {
+      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
+      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+    }
+
     ignore_changes = [
       app_settings["AZURE_REDIS_HOST"],
       app_settings["AZURE_REDIS_PORT"],
@@ -2201,6 +2216,11 @@ resource "azurerm_windows_function_app_slot" "this" {
   }
 
   lifecycle {
+    precondition {
+      condition = !contains(keys(local.app_settings), "AZURE_REDIS_PRINCIPALID") || contains(try(keys(each.value.app_settings), []), "AZURE_REDIS_PRINCIPALID")
+      error_message = "Deployment slot '${each.key}' must explicitly set AZURE_REDIS_PRINCIPALID when the primary app config defines it."
+    }
+
     ignore_changes = [
       app_settings["AZURE_REDIS_HOST"],
       app_settings["AZURE_REDIS_PORT"],
