@@ -47,6 +47,7 @@ locals {
     storage_account_name                           = try(local.env_config.app_service.storage_account_name, var.config.global.app_service.storage_account_name, var.storage_account.name, null)
     storage_account_access_key                     = try(local.env_config.app_service.storage_account_access_key, var.config.global.app_service.storage_account_access_key, var.storage_account.primary_access_key, null)
     storage_account_connection_string              = try(local.env_config.app_service.storage_account_connection_string, var.config.global.app_service.storage_account_connection_string, var.storage_account.primary_connection_string, null)
+    storage_uses_managed_identity                  = try(local.env_config.app_service.storage_uses_managed_identity, var.config.global.app_service.storage_uses_managed_identity, false)
     functions_extension_version                    = try(local.env_config.app_service.functions_extension_version, var.config.global.app_service.functions_extension_version, "~4")
     https_only                                     = try(local.env_config.app_service.https_only, var.config.global.app_service.https_only, true)
     builtin_logging_enabled                        = try(local.env_config.app_service.builtin_logging_enabled, var.config.global.app_service.builtin_logging_enabled, false)
@@ -77,7 +78,7 @@ locals {
       enabled_logs = [
         for i in coalescelist(
           concat(
-            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]),  []),
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]), []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_logs]), [])
           ),
           [
@@ -89,7 +90,7 @@ locals {
       enabled_metrics = [
         for i in coalescelist(
           concat(
-            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_metrics]),  []),
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_metrics]), []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_metrics]), [])
           ),
           [
@@ -118,7 +119,7 @@ locals {
       identity_ids = concat(try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
     }
 
-    ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
+    ip_restrictions = [for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
       {
         action                    = null
         name                      = null
@@ -137,13 +138,13 @@ locals {
               x_forwarded_for   = []
               x_forwarded_host  = []
             },
-            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y] }
           )
         ] : null
       }
-    ) ]
+    )]
 
-    scm_ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
+    scm_ip_restrictions = [for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
       {
         action                    = null
         name                      = null
@@ -162,17 +163,17 @@ locals {
               x_forwarded_for   = []
               x_forwarded_host  = []
             },
-            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y] }
           )
         ] : null
       }
-    ) ]
+    )]
 
     service_connections = {
       for k in setunion(
         try(keys(var.config.global.app_service.service_connections), []),
         try(keys(local.env_config.app_service.service_connections), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           authentication = {
             type            = "systemAssignedIdentity" // systemAssignedIdentity or userAssignedIdentity
@@ -247,7 +248,7 @@ locals {
             local.env_config.app_service.site_config.application_stack,
             var.config.global.app_service.site_config.application_stack,
             {
-              java_version   = 17
+              java_version = 17
             }
           )
         )
@@ -268,7 +269,7 @@ locals {
       for k in setunion(
         try(keys(var.config.global.app_service.deployment_slots), []),
         try(keys(local.env_config.app_service.deployment_slots), [])
-      ) : k => merge(
+        ) : k => merge(
         try(var.config.global.app_service.deployment_slots[k], {}),
         try(local.env_config.app_service.deployment_slots[k], {}),
         {
@@ -315,7 +316,7 @@ locals {
   appinsights_app_settings = local.config.type == "WebApp" && local.appinsights_connection_string != null ? merge(
     {
       "APPLICATIONINSIGHTS_CONNECTION_STRING"      = local.appinsights_connection_string
-      "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2"}[local.config.os_type]
+      "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2" }[local.config.os_type]
     },
     yamldecode(file("${path.module}/appinsights_defaults.yml"))
   ) : {}
@@ -333,8 +334,12 @@ locals {
     local.config.os_type == "Linux" && local.config.type == "WebApp" ? {
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     } : {},
-    try(local.config.app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"], false) ? {
+    try(local.config.app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"], false) && !(local.config.type == "FunctionApp" && local.config.storage_uses_managed_identity) ? {
       "AzureWebJobsStorage" = local.config.storage_account_connection_string
+    } : {},
+    local.config.type == "FunctionApp" && local.config.storage_uses_managed_identity ? {
+      "AzureWebJobsStorage__accountName" = local.config.storage_account_name
+      "AzureWebJobsStorage__credential"  = "managedidentity"
     } : {},
     local.config.zip_deploy_file != null ? {
       "WEBSITE_RUN_FROM_PACKAGE" = 1
@@ -343,9 +348,21 @@ locals {
   )
 
   database_jdbc_basestring = local.config.database.server_fqdn != null ? format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name) : null
-  database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
+  database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [for k, v in local.config.database.jdbc_properties : "${k}=${v}"])), null)
 
-  service_connection_app_settings    = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
+  # Falls back to the module-managed user-assigned identity when the app doesn't use a system-assigned identity.
+  # Each candidate is wrapped in its own try() since only one of these resources exists at a time (count = 0 for the others).
+  function_app_principal_id = try(
+    coalesce(
+      try(azurerm_linux_function_app.this.0.identity.0.principal_id, null),
+      try(azurerm_windows_function_app.this.0.identity.0.principal_id, null),
+      try(azapi_resource.flex_function.0.identity.0.principal_id, null),
+      try(azurerm_user_assigned_identity.this.0.principal_id, null)
+    ),
+    null
+  )
+
+  service_connection_app_settings = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
   service_connection_sticky_settings = flatten(
     matchkeys(
       values(local.service_connection_app_settings),
@@ -557,7 +574,7 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
 
             content {
               count      = slow_request.value.count
@@ -567,7 +584,7 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
 
             content {
               count      = slow_request.value.count
@@ -594,7 +611,7 @@ resource "azurerm_linux_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version))]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -654,7 +671,7 @@ resource "azurerm_linux_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
+    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -798,7 +815,7 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
 
             content {
               count      = slow_request.value.count
@@ -808,7 +825,7 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
 
             content {
               count      = slow_request.value.count
@@ -835,7 +852,7 @@ resource "azurerm_linux_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version))]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -1044,7 +1061,7 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
 
             content {
               count      = slow_request.value.count
@@ -1054,7 +1071,7 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
 
             content {
               count      = slow_request.value.count
@@ -1081,7 +1098,7 @@ resource "azurerm_windows_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version))]
 
       content {
         docker_image_name            = application_stack.value.docker_image_name
@@ -1138,7 +1155,7 @@ resource "azurerm_windows_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
+    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -1293,7 +1310,7 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
 
             content {
               count      = slow_request.value.count
@@ -1303,7 +1320,7 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
+            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
 
             content {
               count      = slow_request.value.count
@@ -1330,7 +1347,7 @@ resource "azurerm_windows_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version))]
 
       content {
         docker_image_name            = application_stack.value.docker_image_name
@@ -1498,7 +1515,8 @@ resource "azurerm_linux_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = local.config.storage_uses_managed_identity ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = local.config.storage_uses_managed_identity
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   https_only                                     = local.config.https_only
@@ -1541,7 +1559,7 @@ resource "azurerm_linux_function_app" "this" {
     app_command_line                              = local.config.site_config.app_command_line
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version))]
 
       content {
         dynamic "docker" {
@@ -1556,11 +1574,11 @@ resource "azurerm_linux_function_app" "this" {
           }
         }
 
-        dotnet_version              = application_stack.value.dotnet_version
-        java_version                = application_stack.value.java_version
-        node_version                = application_stack.value.node_version
-        python_version              = application_stack.value.python_version
-        powershell_core_version     = application_stack.value.powershell_core_version
+        dotnet_version          = application_stack.value.dotnet_version
+        java_version            = application_stack.value.java_version
+        node_version            = application_stack.value.node_version
+        python_version          = application_stack.value.python_version
+        powershell_core_version = application_stack.value.powershell_core_version
       }
     }
 
@@ -1605,7 +1623,7 @@ resource "azurerm_linux_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
+    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -1693,7 +1711,8 @@ resource "azurerm_linux_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = local.config.storage_uses_managed_identity ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = local.config.storage_uses_managed_identity
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -1735,7 +1754,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version))]
 
       content {
         dynamic "docker" {
@@ -1750,11 +1769,11 @@ resource "azurerm_linux_function_app_slot" "this" {
           }
         }
 
-        dotnet_version              = application_stack.value.dotnet_version
-        java_version                = application_stack.value.java_version
-        node_version                = application_stack.value.node_version
-        python_version              = application_stack.value.python_version
-        powershell_core_version     = application_stack.value.powershell_core_version
+        dotnet_version          = application_stack.value.dotnet_version
+        java_version            = application_stack.value.java_version
+        node_version            = application_stack.value.node_version
+        python_version          = application_stack.value.python_version
+        powershell_core_version = application_stack.value.powershell_core_version
       }
     }
 
@@ -1881,7 +1900,8 @@ resource "azurerm_windows_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = local.config.storage_uses_managed_identity ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = local.config.storage_uses_managed_identity
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -1922,7 +1942,7 @@ resource "azurerm_windows_function_app" "this" {
     app_command_line                       = local.config.site_config.app_command_line
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version))]
 
       content {
         dotnet_version              = application_stack.value.dotnet_version
@@ -1974,7 +1994,7 @@ resource "azurerm_windows_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
+    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -2062,7 +2082,8 @@ resource "azurerm_windows_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = local.config.storage_uses_managed_identity ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = local.config.storage_uses_managed_identity
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -2102,7 +2123,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
+      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version))]
 
       content {
         dotnet_version              = application_stack.value.dotnet_version
@@ -2226,6 +2247,15 @@ resource "azurerm_windows_function_app_slot" "this" {
     ]
     replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
+}
+
+resource "azurerm_role_assignment" "storage_blob_data_contributor" {
+  # Flex Consumption gets its own role assignment (see flex_consumption.tf).
+  count                            = local.config.type == "FunctionApp" && local.config.storage_uses_managed_identity && var.storage_account != null && try(!startswith(local.config.sku_name, "FC"), true) ? 1 : 0
+  scope                            = var.storage_account.id
+  role_definition_name             = "Storage Blob Data Contributor"
+  principal_id                     = local.function_app_principal_id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_function_app_connection" "this" {
