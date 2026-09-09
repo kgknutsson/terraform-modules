@@ -39,7 +39,7 @@ variable "tags" {
 }
 
 variable "resource_group" {
-  type        = object({
+  type = object({
     id       = string
     name     = string
     location = string
@@ -49,11 +49,11 @@ variable "resource_group" {
 
   Resource Group resources created outside this module.
   EOT
-  default = null
+  default     = null
 }
 
 variable "app_service" {
-  type        = object({
+  type = object({
     application_insights_resource_id       = optional(string)
     application_insights_connection_string = optional(string)
   })

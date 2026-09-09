@@ -62,7 +62,7 @@ locals {
       for i, v in compact(concat(
         keys(try(local.env_config.compute.network_interfaces, {})),
         keys(try(var.config.global.compute.network_interfaces, {}))
-      )) : v => {
+        )) : v => {
         primary                       = try(local.env_config.compute.network_interfaces[v].primary, var.config.global.compute.network_interfaces[v].primary, i == 0)
         enable_accelerated_networking = try(local.env_config.compute.network_interfaces[v].enable_accelerated_networking, var.config.global.compute.network_interfaces[v].enable_accelerated_networking, null)
         network_security_group_id     = try(local.env_config.compute.network_interfaces[v].network_security_group_id, var.config.global.compute.network_interfaces[v].network_security_group_id, null)
@@ -72,7 +72,7 @@ locals {
 
     os_disk = {
       storage_account_type = try(local.env_config.compute.os_disk.storage_account_type, var.config.global.compute.os_disk.storage_account_type, "Standard_LRS") # Standard_LRS, StandardSSD_LRS, StandardSSD_ZRS, Premium_LRS or Premium_ZRS
-      caching              = try(local.env_config.compute.os_disk.caching, var.config.global.compute.os_disk.caching, "None") # None, ReadOnly and ReadWrite
+      caching              = try(local.env_config.compute.os_disk.caching, var.config.global.compute.os_disk.caching, "None")                                   # None, ReadOnly and ReadWrite
     }
 
     boot_diagnostics = {
@@ -212,7 +212,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "this" {
   }
 
   dynamic "boot_diagnostics" {
-    for_each = local.config.boot_diagnostics.enabled ? [ local.config.boot_diagnostics.storage_account_uri ] : []
+    for_each = local.config.boot_diagnostics.enabled ? [local.config.boot_diagnostics.storage_account_uri] : []
 
     content {
       storage_account_uri = boot_diagnostics.value

@@ -27,7 +27,7 @@ locals {
         "azurerm_vpn_site",
         "azurerm_vpn_gateway",
         "azurerm_vpn_gateway_connection",
-      ] : i => merge(
+        ] : i => merge(
         {
           name          = null
           suffixes      = compact([var.environment])
@@ -38,8 +38,8 @@ locals {
       )
     }
 
-    type               = try(local.env_config.virtual_wan.type, var.config.global.virtual_wan.type, null)
-    virtual_hubs       = merge(try(var.config.global.virtual_wan.virtual_hubs, {}), try(local.env_config.virtual_wan.virtual_hubs, {}))
+    type         = try(local.env_config.virtual_wan.type, var.config.global.virtual_wan.type, null)
+    virtual_hubs = merge(try(var.config.global.virtual_wan.virtual_hubs, {}), try(local.env_config.virtual_wan.virtual_hubs, {}))
   }
 }
 
@@ -87,7 +87,7 @@ resource "azurecaf_name" "virtual_hub_connection" {
   for_each = setunion([], [
     for k, v in local.config.virtual_hubs : [
       for i in try(v.virtual_network_connections, []) : join("-", [k, split("/", i)[8]])
-     ] if local.config.type != null
+    ] if local.config.type != null
   ]...)
 
   resource_type = "azurerm_virtual_hub_connection"
@@ -138,7 +138,7 @@ resource "azurecaf_name" "vpn_site" {
     for k, v in local.config.virtual_hubs : {
       for x, y in v.vpn_sites : join("_", [k, x]) => y
     } if local.config.type != null
-  ]...) 
+  ]...)
 
   name          = coalesce(local.config.naming["azurerm_vpn_site"].name, var.config.global.name)
   resource_type = "azurerm_vpn_site"
@@ -151,7 +151,7 @@ resource "azurerm_vpn_site" "this" {
     for k, v in local.config.virtual_hubs : {
       for x, y in v.vpn_sites : join("_", [k, x]) => y
     } if local.config.type != null
-  ]...) 
+  ]...)
 
   name                = azurecaf_name.vpn_site[each.key].result
   resource_group_name = local.config.resource_group_name
@@ -179,7 +179,7 @@ resource "azurecaf_name" "vpn_gateway_connection" {
     for k, v in local.config.virtual_hubs : {
       for x, y in v.vpn_sites : join("_", [k, x]) => y
     } if local.config.type != null
-  ]...) 
+  ]...)
 
   name          = coalesce(local.config.naming["azurerm_vpn_gateway_connection"].name, var.config.global.name)
   resource_type = "azurerm_vpn_gateway_connection"
@@ -192,7 +192,7 @@ resource "azurerm_vpn_gateway_connection" "this" {
     for k, v in local.config.virtual_hubs : {
       for x, y in v.vpn_sites : join("_", [k, x]) => y
     } if local.config.type != null
-  ]...) 
+  ]...)
 
   name               = azurecaf_name.vpn_gateway_connection[each.key].result
   vpn_gateway_id     = azurerm_vpn_gateway.this[split("_", each.key).0].id
@@ -208,6 +208,6 @@ resource "azurerm_vpn_gateway_connection" "this" {
   }
 
   lifecycle {
-    ignore_changes = [ vpn_link.0.shared_key ]
+    ignore_changes = [vpn_link.0.shared_key]
   }
 }
