@@ -77,7 +77,7 @@ locals {
       enabled_logs = [
         for i in coalescelist(
           concat(
-            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]), []),
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_logs]),  []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_logs]), [])
           ),
           [
@@ -89,7 +89,7 @@ locals {
       enabled_metrics = [
         for i in coalescelist(
           concat(
-            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_metrics]), []),
+            try(flatten([var.config.global.app_service.monitor_diagnostic_setting.enabled_metrics]),  []),
             try(flatten([local.env_config.app_service.monitor_diagnostic_setting.enabled_metrics]), [])
           ),
           [
@@ -118,7 +118,7 @@ locals {
       identity_ids = concat(try(var.config.global.app_service.identity.identity_ids, []), try(local.env_config.app_service.identity.identity_ids, []))
     }
 
-    ip_restrictions = [for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
+    ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.ip_restrictions, []), try(local.env_config.app_service.ip_restrictions, [])) : merge(
       {
         action                    = null
         name                      = null
@@ -137,13 +137,13 @@ locals {
               x_forwarded_for   = []
               x_forwarded_host  = []
             },
-            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y] }
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
           )
         ] : null
       }
-    )]
+    ) ]
 
-    scm_ip_restrictions = [for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
+    scm_ip_restrictions = [ for i, v in concat(try(var.config.global.app_service.scm_ip_restrictions, []), try(local.env_config.app_service.scm_ip_restrictions, [])) : merge(
       {
         action                    = null
         name                      = null
@@ -162,17 +162,17 @@ locals {
               x_forwarded_for   = []
               x_forwarded_host  = []
             },
-            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y] }
+            { for x, y in v.headers : lower(replace(x, "-", "_")) => [y]}
           )
         ] : null
       }
-    )]
+    ) ]
 
     service_connections = {
       for k in setunion(
         try(keys(var.config.global.app_service.service_connections), []),
         try(keys(local.env_config.app_service.service_connections), [])
-        ) : k => merge(
+      ) : k => merge(
         {
           authentication = {
             type            = "systemAssignedIdentity" // systemAssignedIdentity or userAssignedIdentity
@@ -247,7 +247,7 @@ locals {
             local.env_config.app_service.site_config.application_stack,
             var.config.global.app_service.site_config.application_stack,
             {
-              java_version = 17
+              java_version   = 17
             }
           )
         )
@@ -268,7 +268,7 @@ locals {
       for k in setunion(
         try(keys(var.config.global.app_service.deployment_slots), []),
         try(keys(local.env_config.app_service.deployment_slots), [])
-        ) : k => merge(
+      ) : k => merge(
         try(var.config.global.app_service.deployment_slots[k], {}),
         try(local.env_config.app_service.deployment_slots[k], {}),
         {
@@ -315,7 +315,7 @@ locals {
   appinsights_app_settings = local.config.type == "WebApp" && local.appinsights_connection_string != null ? merge(
     {
       "APPLICATIONINSIGHTS_CONNECTION_STRING"      = local.appinsights_connection_string
-      "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2" }[local.config.os_type]
+      "ApplicationInsightsAgent_EXTENSION_VERSION" = { Linux = "~3", Windows = "~2"}[local.config.os_type]
     },
     yamldecode(file("${path.module}/appinsights_defaults.yml"))
   ) : {}
@@ -347,7 +347,7 @@ locals {
   )
 
   database_jdbc_basestring = local.config.database.server_fqdn != null ? format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name) : null
-  database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [for k, v in local.config.database.jdbc_properties : "${k}=${v}"])), null)
+  database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
 
   # Falls back to the module-managed user-assigned identity when the app doesn't use a system-assigned identity.
   # Each candidate is wrapped in its own try() since only one of these resources exists at a time (count = 0 for the others).
@@ -361,7 +361,7 @@ locals {
     null
   )
 
-  service_connection_app_settings = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
+  service_connection_app_settings    = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
   service_connection_sticky_settings = flatten(
     matchkeys(
       values(local.service_connection_app_settings),
@@ -573,7 +573,7 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
@@ -583,7 +583,7 @@ resource "azurerm_linux_web_app" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
 
             content {
               count      = slow_request.value.count
@@ -610,7 +610,7 @@ resource "azurerm_linux_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -670,7 +670,7 @@ resource "azurerm_linux_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -814,7 +814,7 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
@@ -824,7 +824,7 @@ resource "azurerm_linux_web_app_slot" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
 
             content {
               count      = slow_request.value.count
@@ -851,7 +851,7 @@ resource "azurerm_linux_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -1060,7 +1060,7 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
@@ -1070,7 +1070,7 @@ resource "azurerm_windows_web_app" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
 
             content {
               count      = slow_request.value.count
@@ -1097,7 +1097,7 @@ resource "azurerm_windows_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
         docker_image_name            = application_stack.value.docker_image_name
@@ -1154,7 +1154,7 @@ resource "azurerm_windows_web_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -1309,7 +1309,7 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) == null ]
 
             content {
               count      = slow_request.value.count
@@ -1319,7 +1319,7 @@ resource "azurerm_windows_web_app_slot" "this" {
           }
 
           dynamic "slow_request_with_path" {
-            for_each = [for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null]
+            for_each = [ for i in try(auto_heal_setting.value.trigger.slow_requests, []) : i if try(i.path, null) != null ]
 
             content {
               count      = slow_request.value.count
@@ -1346,7 +1346,7 @@ resource "azurerm_windows_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
         docker_image_name            = application_stack.value.docker_image_name
@@ -1558,7 +1558,7 @@ resource "azurerm_linux_function_app" "this" {
     app_command_line                              = local.config.site_config.app_command_line
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
         dynamic "docker" {
@@ -1573,11 +1573,11 @@ resource "azurerm_linux_function_app" "this" {
           }
         }
 
-        dotnet_version          = application_stack.value.dotnet_version
-        java_version            = application_stack.value.java_version
-        node_version            = application_stack.value.node_version
-        python_version          = application_stack.value.python_version
-        powershell_core_version = application_stack.value.powershell_core_version
+        dotnet_version              = application_stack.value.dotnet_version
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        python_version              = application_stack.value.python_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 
@@ -1622,7 +1622,7 @@ resource "azurerm_linux_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -1753,7 +1753,7 @@ resource "azurerm_linux_function_app_slot" "this" {
     auto_swap_slot_name                           = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(try(i.docker.0.image_name, null), i.dotnet_version, i.java_version, i.node_version, i.python_version, i.powershell_core_version)) ]
 
       content {
         dynamic "docker" {
@@ -1768,11 +1768,11 @@ resource "azurerm_linux_function_app_slot" "this" {
           }
         }
 
-        dotnet_version          = application_stack.value.dotnet_version
-        java_version            = application_stack.value.java_version
-        node_version            = application_stack.value.node_version
-        python_version          = application_stack.value.python_version
-        powershell_core_version = application_stack.value.powershell_core_version
+        dotnet_version              = application_stack.value.dotnet_version
+        java_version                = application_stack.value.java_version
+        node_version                = application_stack.value.node_version
+        python_version              = application_stack.value.python_version
+        powershell_core_version     = application_stack.value.powershell_core_version
       }
     }
 
@@ -1941,7 +1941,7 @@ resource "azurerm_windows_function_app" "this" {
     app_command_line                       = local.config.site_config.app_command_line
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
 
       content {
         dotnet_version              = application_stack.value.dotnet_version
@@ -1993,7 +1993,7 @@ resource "azurerm_windows_function_app" "this" {
   app_settings = local.app_settings
 
   dynamic "sticky_settings" {
-    for_each = [for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0]
+    for_each = [ for i in local.config.sticky_settings[*] : i if length(coalesce(i.app_setting_names, i.connection_string_names, concat(keys(local.appinsights_app_settings), local.service_connection_sticky_settings))) > 0 ]
 
     content {
       app_setting_names       = distinct(concat(coalesce(sticky_settings.value.app_setting_names, []), keys(local.appinsights_app_settings), local.service_connection_sticky_settings))
@@ -2122,7 +2122,7 @@ resource "azurerm_windows_function_app_slot" "this" {
     auto_swap_slot_name                    = try(each.value.site_config.auto_swap_slot_name, null)
 
     dynamic "application_stack" {
-      for_each = [for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version))]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.dotnet_version, i.java_version, i.node_version, i.powershell_core_version)) ]
 
       content {
         dotnet_version              = application_stack.value.dotnet_version
@@ -2248,9 +2248,10 @@ resource "azurerm_windows_function_app_slot" "this" {
   }
 }
 
-resource "azurerm_role_assignment" "storage_blob_data_contributor" {
+resource "azurerm_role_assignment" "storage_blob_data_owner" {
   # Flex Consumption gets its own role assignment (see flex_consumption.tf).
-  count                            = local.config.type == "FunctionApp" && try(startswith(local.config.identity.type, "SystemAssigned"), false) && var.storage_account != null && try(!startswith(local.config.sku_name, "FC"), true) ? 1 : 0
+  count = local.config.type == "FunctionApp" && try(startswith(local.config.identity.type, "SystemAssigned"), false) && var.storage_account != null && try(!startswith(local.config.sku_name, "FC"), true) ? 1 : 0
+
   scope                            = var.storage_account.id
   role_definition_name             = "Storage Blob Data Contributor"
   principal_id                     = local.function_app_principal_id
