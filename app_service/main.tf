@@ -333,8 +333,12 @@ locals {
     local.config.os_type == "Linux" && local.config.type == "WebApp" ? {
       "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
     } : {},
-    try(local.config.app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"], false) ? {
+    try(local.config.app_settings["WEBSITES_ENABLE_APP_SERVICE_STORAGE"], false) && !(local.config.type == "FunctionApp" && try(startswith(local.config.identity.type, "SystemAssigned"), false)) ? {
       "AzureWebJobsStorage" = local.config.storage_account_connection_string
+    } : {},
+    local.config.type == "FunctionApp" && try(startswith(local.config.identity.type, "SystemAssigned"), false) ? {
+      "AzureWebJobsStorage__accountName" = local.config.storage_account_name
+      "AzureWebJobsStorage__credential"  = "managedidentity"
     } : {},
     local.config.zip_deploy_file != null ? {
       "WEBSITE_RUN_FROM_PACKAGE" = 1
@@ -344,6 +348,18 @@ locals {
 
   database_jdbc_basestring = local.config.database.server_fqdn != null ? format(local.config.database.jdbc_template, local.config.database.server_fqdn, local.config.database.server_port, local.config.database.name) : null
   database_jdbc_string     = try(join(";", concat([local.database_jdbc_basestring], [ for k, v in local.config.database.jdbc_properties : "${k}=${v}" ])), null)
+
+  # Falls back to the module-managed user-assigned identity when the app doesn't use a system-assigned identity.
+  # Each candidate is wrapped in its own try() since only one of these resources exists at a time (count = 0 for the others).
+  function_app_principal_id = try(
+    coalesce(
+      try(azurerm_linux_function_app.this.0.identity.0.principal_id, null),
+      try(azurerm_windows_function_app.this.0.identity.0.principal_id, null),
+      try(azapi_resource.flex_function.0.identity.0.principal_id, null),
+      try(azurerm_user_assigned_identity.this.0.principal_id, null)
+    ),
+    null
+  )
 
   service_connection_app_settings    = yamldecode(file("${path.module}/service_connection_app_settings.yml"))
   service_connection_sticky_settings = flatten(
@@ -1498,7 +1514,8 @@ resource "azurerm_linux_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   https_only                                     = local.config.https_only
@@ -1693,7 +1710,8 @@ resource "azurerm_linux_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -1881,7 +1899,8 @@ resource "azurerm_windows_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -2062,7 +2081,8 @@ resource "azurerm_windows_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -2226,6 +2246,16 @@ resource "azurerm_windows_function_app_slot" "this" {
     ]
     replace_triggered_by = [terraform_data.app_slot_replacement_trigger[each.key]]
   }
+}
+
+resource "azurerm_role_assignment" "storage_blob_data_owner" {
+  # Flex Consumption gets its own role assignment (see flex_consumption.tf).
+  count = local.config.type == "FunctionApp" && try(startswith(local.config.identity.type, "SystemAssigned"), false) && var.storage_account != null && try(!startswith(local.config.sku_name, "FC"), true) ? 1 : 0
+
+  scope                            = var.storage_account.id
+  role_definition_name             = "Storage Blob Data Contributor"
+  principal_id                     = local.function_app_principal_id
+  skip_service_principal_aad_check = true
 }
 
 resource "azurerm_function_app_connection" "this" {

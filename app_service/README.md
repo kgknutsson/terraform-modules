@@ -21,6 +21,11 @@ module "app_service" {
 }
 ```
 
+## Function App storage authentication
+
+By default, Function Apps authenticate to their platform storage account (`AzureWebJobsStorage`) using the storage account access key. To use the Function App's system-assigned managed identity instead, set `storage_uses_managed_identity = true` in the `app_service` config block:
+
+
 ## Resources
 
 [Terraform Azure App Service reference](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/app_service)
