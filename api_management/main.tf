@@ -54,6 +54,30 @@ locals {
       )
     }
 
+    policy_fragments = {
+      for k in keys(merge(
+        try(var.config.global.api_management.policy_fragments, {}),
+        try(local.env_config.api_management.policy_fragments, {})
+      )) : k => {
+        description = try(
+          local.env_config.api_management.policy_fragments[k].description,
+          var.config.global.api_management.policy_fragments[k].description,
+          null
+        )
+        format = try(
+          local.env_config.api_management.policy_fragments[k].format,
+          var.config.global.api_management.policy_fragments[k].format,
+          "rawxml"
+        )
+        value = try(
+          local.env_config.api_management.policy_fragments[k].value,
+          local.env_config.api_management.policy_fragments[k],
+          var.config.global.api_management.policy_fragments[k].value,
+          var.config.global.api_management.policy_fragments[k]
+        )
+      }
+    }
+
     apis = {
       for k in keys(merge(
         try(var.config.global.api_management.apis, {}),
@@ -504,6 +528,16 @@ resource "azurerm_api_management_api_operation" "this" {
   }
 
   depends_on = [ azurerm_api_management_api.this ]
+}
+
+resource "azurerm_api_management_policy_fragment" "this" {
+  for_each = local.config.policy_fragments
+
+  api_management_id = try(azurerm_api_management.this[0].id, data.azurerm_api_management.this[0].id)
+  name              = each.key
+  description       = each.value.description
+  format            = each.value.format
+  value             = try(startswith(each.value.value, "file:") ? file(format("%s/%s", path.root, split(":", each.value.value)[1])) : each.value.value, null)
 }
 
 resource "azurerm_api_management_api_operation_policy" "this" {
