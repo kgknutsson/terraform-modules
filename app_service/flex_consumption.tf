@@ -143,11 +143,3 @@ resource "azapi_update_resource" "web_sites_config" {
     }
   }
 }
-
-resource "azurerm_role_assignment" "func" {
-  count = local.flex_count
-
-  principal_id         = azapi_resource.flex_function[0].identity[0].principal_id
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = var.storage_account.id
-}

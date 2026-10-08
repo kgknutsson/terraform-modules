@@ -1498,7 +1498,8 @@ resource "azurerm_linux_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   https_only                                     = local.config.https_only
@@ -1693,7 +1694,8 @@ resource "azurerm_linux_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -1881,7 +1883,8 @@ resource "azurerm_windows_function_app" "this" {
   location                                       = local.config.location
   service_plan_id                                = local.config.service_plan_id != null ? local.config.service_plan_id : azurerm_service_plan.this.0.id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   virtual_network_subnet_id                      = local.config.virtual_network_subnet_id
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -2062,7 +2065,8 @@ resource "azurerm_windows_function_app_slot" "this" {
   service_plan_id                                = try(each.value.service_plan_id, null)
   virtual_network_subnet_id                      = each.value.virtual_network_subnet_id
   storage_account_name                           = local.config.storage_account_name
-  storage_account_access_key                     = local.config.storage_account_access_key
+  storage_account_access_key                     = try(startswith(local.config.identity.type, "SystemAssigned"), false) ? null : local.config.storage_account_access_key
+  storage_uses_managed_identity                  = try(startswith(local.config.identity.type, "SystemAssigned"), false)
   functions_extension_version                    = local.config.functions_extension_version
   https_only                                     = local.config.https_only
   builtin_logging_enabled                        = local.config.builtin_logging_enabled
@@ -2252,4 +2256,12 @@ resource "azurerm_function_app_connection" "this" {
     client_id       = each.value.authentication.client_id
     subscription_id = each.value.authentication.client_id != null ? coalesce(each.value.authentication.subscription_id, data.azurerm_client_config.this.subscription_id) : null
   }
+}
+
+resource "azurerm_role_assignment" "func" {
+  count = local.config.type == "FunctionApp" && startswith(local.config.identity.type, "SystemAssigned") && var.storage_account != null ? 1 : 0
+
+  scope                            = var.storage_account.id
+  role_definition_name             = "Storage Blob Data Contributor"
+  principal_id                     = try(azapi_resource.flex_function[0], azurerm_linux_function_app.this[0], azurerm_windows_function_app.this[0]).identity[0].principal_id
 }
