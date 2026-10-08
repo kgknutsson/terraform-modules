@@ -66,7 +66,7 @@ resource "azurerm_private_dns_resolver_outbound_endpoint" "this" {
   location                = local.config.location
   tags                    = local.config.tags
   subnet_id               = local.config.outbound_endpoint_subnet_id
-  }
+}
 
 resource "azurerm_private_dns_resolver_dns_forwarding_ruleset" "this" {
   count = length(azurerm_private_dns_resolver_outbound_endpoint.this)

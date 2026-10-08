@@ -39,12 +39,12 @@ locals {
 }
 
 resource "azurecaf_name" "resource_group" {
-  name           = local.config.naming["azurerm_resource_group"].name
-  resource_type  = "azurerm_resource_group"
-  prefixes       = local.config.naming["azurerm_resource_group"].prefixes
-  suffixes       = local.config.naming["azurerm_resource_group"].suffixes
-  random_length  = local.config.naming["azurerm_resource_group"].random_length
-  use_slug       = local.config.naming["azurerm_resource_group"].use_slug
+  name          = local.config.naming["azurerm_resource_group"].name
+  resource_type = "azurerm_resource_group"
+  prefixes      = local.config.naming["azurerm_resource_group"].prefixes
+  suffixes      = local.config.naming["azurerm_resource_group"].suffixes
+  random_length = local.config.naming["azurerm_resource_group"].random_length
+  use_slug      = local.config.naming["azurerm_resource_group"].use_slug
 }
 
 resource "azurerm_resource_group" "this" {

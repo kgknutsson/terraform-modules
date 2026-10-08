@@ -145,7 +145,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
 
 resource "azurerm_monitor_action_group" "this" {
   for_each = local.config.action_groups
-  
+
   name                = each.key
   resource_group_name = local.config.resource_group_name
   tags                = local.config.tags
@@ -165,13 +165,13 @@ resource "azurerm_monitor_action_group" "this" {
 resource "azurerm_monitor_activity_log_alert" "this" {
   for_each = { for i in local.config.activity_log_alerts : i.name => i }
 
-  name                     = coalesce(try(each.value.formatted_name, null), each.key)
-  resource_group_name      = local.config.resource_group_name
-  location                 = try(each.value.location, "global") // global, westeurope or northeurope
-  tags                     = local.config.tags
-  scopes                   = each.value.scopes
-  description              = try(each.value.description, null)
-  enabled                  = try(each.value.enabled, true)
+  name                = coalesce(try(each.value.formatted_name, null), each.key)
+  resource_group_name = local.config.resource_group_name
+  location            = try(each.value.location, "global") // global, westeurope or northeurope
+  tags                = local.config.tags
+  scopes              = each.value.scopes
+  description         = try(each.value.description, null)
+  enabled             = try(each.value.enabled, true)
 
   criteria {
     category        = each.value.criteria.category // Administrative, Autoscale, Policy, Recommendation, ResourceHealth, Security or ServiceHealth
@@ -199,7 +199,7 @@ resource "azurerm_monitor_activity_log_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [for id in local.config.default_action_group_ids : { action_group_id = id }]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)
@@ -219,19 +219,19 @@ resource "azurerm_monitor_metric_alert" "this" {
   severity                 = try(each.value.severity, 3) // 0, 1, 2, 3 or 4
   target_resource_type     = try(each.value.target_resource_type, null)
   target_resource_location = try(each.value.target_resource_location, local.config.location)
-  frequency                = try(each.value.frequency, "PT1M") // PT1M, PT5M, PT15M, PT30M or PT1H
+  frequency                = try(each.value.frequency, "PT1M")   // PT1M, PT5M, PT15M, PT30M or PT1H
   window_size              = try(each.value.window_size, "PT5M") // PT1M, PT5M, PT15M, PT30M, PT1H, PT6H, PT12H or P1D
   auto_mitigate            = try(each.value.auto_mitigate, true)
   enabled                  = try(each.value.enabled, true)
 
   dynamic "criteria" {
     for_each = try(each.value.criteria, [])
-    
+
     content {
       metric_namespace       = criteria.value.metric_namespace
       metric_name            = criteria.value.metric_name
       aggregation            = criteria.value.aggregation // Average, Count, Minimum, Maximum or Total
-      operator               = criteria.value.operator // Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan or LessThanOrEqual
+      operator               = criteria.value.operator    // Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan or LessThanOrEqual
       threshold              = criteria.value.threshold
       skip_metric_validation = try(criteria.value.skip_metric_validation, false)
 
@@ -253,8 +253,8 @@ resource "azurerm_monitor_metric_alert" "this" {
     content {
       metric_namespace         = dynamic_criteria.value.metric_namespace
       metric_name              = dynamic_criteria.value.metric_name
-      aggregation              = dynamic_criteria.value.aggregation // Average, Count, Minimum, Maximum or Total
-      operator                 = dynamic_criteria.value.operator // LessThan, GreaterThan or GreaterOrLessThan
+      aggregation              = dynamic_criteria.value.aggregation       // Average, Count, Minimum, Maximum or Total
+      operator                 = dynamic_criteria.value.operator          // LessThan, GreaterThan or GreaterOrLessThan
       alert_sensitivity        = dynamic_criteria.value.alert_sensitivity // Low, Medium or High
       evaluation_total_count   = try(dynamic_criteria.value.evaluation_total_count, 4)
       evaluation_failure_count = try(dynamic_criteria.value.evaluation_failure_count, 4)
@@ -284,7 +284,7 @@ resource "azurerm_monitor_metric_alert" "this" {
   }
 
   dynamic "action" {
-    for_each = distinct(concat(try(each.value.action, []), [ for id in local.config.default_action_group_ids : { action_group_id = id } ]))
+    for_each = distinct(concat(try(each.value.action, []), [for id in local.config.default_action_group_ids : { action_group_id = id }]))
 
     content {
       action_group_id    = try(azurerm_monitor_action_group.this[action.value.action_group_id].id, action.value.action_group_id)

@@ -101,7 +101,7 @@ locals {
         instances = { for i in setunion(
           keys(try(var.config.global.mssql_database.databases[k].instances, {})),
           keys(try(local.env_config.mssql_database.databases[k].instances, {}))
-        ) : i == "_" ? k : format("%s-%s", k, i) => merge(
+          ) : i == "_" ? k : format("%s-%s", k, i) => merge(
           try(var.config.global.mssql_database.databases[k].instances[i], {}),
           try(local.env_config.mssql_database.databases[k].instances[i], {})
         ) }
@@ -125,12 +125,12 @@ locals {
 }
 
 resource "azurecaf_name" "mssql_server" {
-  name           = local.config.naming["azurerm_mssql_server"].name
-  resource_type  = "azurerm_mssql_server"
-  prefixes       = local.config.naming["azurerm_mssql_server"].prefixes
-  suffixes       = local.config.naming["azurerm_mssql_server"].suffixes
-  random_length  = local.config.naming["azurerm_mssql_server"].random_length
-  use_slug       = local.config.naming["azurerm_mssql_server"].use_slug
+  name          = local.config.naming["azurerm_mssql_server"].name
+  resource_type = "azurerm_mssql_server"
+  prefixes      = local.config.naming["azurerm_mssql_server"].prefixes
+  suffixes      = local.config.naming["azurerm_mssql_server"].suffixes
+  random_length = local.config.naming["azurerm_mssql_server"].random_length
+  use_slug      = local.config.naming["azurerm_mssql_server"].use_slug
 }
 
 resource "azurerm_mssql_server" "this" {
@@ -164,12 +164,12 @@ resource "azurerm_mssql_server" "this" {
 resource "azurecaf_name" "mssql_elasticpool" {
   for_each = local.config.elastic_pools
 
-  name           = local.config.naming["azurerm_mssql_elasticpool"].name
+  name          = local.config.naming["azurerm_mssql_elasticpool"].name
   resource_type = "azurerm_mssql_elasticpool"
-  prefixes       = local.config.naming["azurerm_mssql_elasticpool"].prefixes
-  suffixes       = concat(local.config.naming["azurerm_mssql_elasticpool"].suffixes, [each.key])
-  random_length  = local.config.naming["azurerm_mssql_elasticpool"].random_length
-  use_slug       = local.config.naming["azurerm_mssql_elasticpool"].use_slug
+  prefixes      = local.config.naming["azurerm_mssql_elasticpool"].prefixes
+  suffixes      = concat(local.config.naming["azurerm_mssql_elasticpool"].suffixes, [each.key])
+  random_length = local.config.naming["azurerm_mssql_elasticpool"].random_length
+  use_slug      = local.config.naming["azurerm_mssql_elasticpool"].use_slug
 }
 
 resource "azurerm_mssql_elasticpool" "this" {
@@ -193,8 +193,8 @@ resource "azurerm_mssql_elasticpool" "this" {
   }
 
   per_database_settings {
-   min_capacity = each.value.per_database_settings.min_capacity
-   max_capacity = each.value.per_database_settings.max_capacity
+    min_capacity = each.value.per_database_settings.min_capacity
+    max_capacity = each.value.per_database_settings.max_capacity
   }
 }
 
@@ -240,20 +240,20 @@ resource "azurerm_mssql_database" "this" {
     for_each = [
       for i in try(local.config.databases[each.value.0].instances[each.key].long_term_retention_policy, local.config.databases[each.value.0].long_term_retention_policy)[*] : merge(
         {
-          weekly_retention         = null // Between 1 and 520 weeks in ISO8601 format e.g. P1Y, P1M, P1W or P7D
-          monthly_retention        = null // Between 1 and 120 months in ISO8601 format e.g. P1Y, P1M, P4W or P30D
-          yearly_retention         = null // Between 1 and 10 years in ISO8601 format e.g. P1Y, P12M, P52W or P365D
-          week_of_year             = null // Between 1 and 52
+          weekly_retention  = null // Between 1 and 520 weeks in ISO8601 format e.g. P1Y, P1M, P1W or P7D
+          monthly_retention = null // Between 1 and 120 months in ISO8601 format e.g. P1Y, P1M, P4W or P30D
+          yearly_retention  = null // Between 1 and 10 years in ISO8601 format e.g. P1Y, P12M, P52W or P365D
+          week_of_year      = null // Between 1 and 52
         },
         i
       )
     ]
 
     content {
-      weekly_retention         = long_term_retention_policy.value.weekly_retention
-      monthly_retention        = long_term_retention_policy.value.monthly_retention
-      yearly_retention         = long_term_retention_policy.value.yearly_retention
-      week_of_year             = long_term_retention_policy.value.week_of_year
+      weekly_retention  = long_term_retention_policy.value.weekly_retention
+      monthly_retention = long_term_retention_policy.value.monthly_retention
+      yearly_retention  = long_term_retention_policy.value.yearly_retention
+      week_of_year      = long_term_retention_policy.value.week_of_year
     }
   }
 }

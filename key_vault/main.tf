@@ -42,7 +42,7 @@ locals {
       bypass                     = try(local.env_config.key_vault.network_acls.bypass, var.config.global.key_vault.network_acls.bypass, "AzureServices")
       default_action             = try(local.env_config.key_vault.network_acls.default_action, var.config.global.key_vault.network_acls.default_action, "Deny")
       ip_rules                   = concat(try(var.config.global.key_vault.network_acls.ip_rules, []), try(local.env_config.key_vault.network_acls.ip_rules, []))
-      virtual_network_subnet_ids = [ for i in setunion(try(var.config.global.key_vault.network_acls.subnets, []), try(local.env_config.key_vault.network_acls.subnets, [])) : try(var.virtual_network.subnet_id_map[i], i) ]
+      virtual_network_subnet_ids = [for i in setunion(try(var.config.global.key_vault.network_acls.subnets, []), try(local.env_config.key_vault.network_acls.subnets, [])) : try(var.virtual_network.subnet_id_map[i], i)]
     }
   }
 }
@@ -72,9 +72,9 @@ resource "azurerm_key_vault" "this" {
   enabled_for_disk_encryption     = local.config.enabled_for_disk_encryption
   enabled_for_template_deployment = local.config.enabled_for_template_deployment
   #tfsec:ignore:azure-keyvault-no-purge
-  purge_protection_enabled        = local.config.purge_protection_enabled
-  soft_delete_retention_days      = local.config.soft_delete_retention_days
-  public_network_access_enabled   = local.config.public_network_access_enabled
+  purge_protection_enabled      = local.config.purge_protection_enabled
+  soft_delete_retention_days    = local.config.soft_delete_retention_days
+  public_network_access_enabled = local.config.public_network_access_enabled
 
   network_acls {
     bypass                     = local.config.network_acls.bypass

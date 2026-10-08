@@ -1,5 +1,5 @@
 variable "config" {
-  type = any
+  type        = any
   description = <<-EOT
   (Required) Module configuration (version 1).
 
@@ -7,7 +7,7 @@ variable "config" {
   EOT
 
   validation {
-    condition = var.config.version == 1
+    condition     = var.config.version == 1
     error_message = "Configuration must be version 1."
   }
 }
@@ -21,13 +21,13 @@ variable "environment" {
   EOT
 
   validation {
-    condition = var.environment == lower(replace(var.environment, " ", ""))
+    condition     = var.environment == lower(replace(var.environment, " ", ""))
     error_message = "Validation failed: Value for environment is not valid."
   }
 }
 
 variable "resource_group" {
-  type = map(string)
+  type        = map(string)
   description = <<-EOT
   (Required) Resource group where resources are to be created.
 
@@ -42,28 +42,28 @@ variable "tags" {
 
   Tags are key-value pair strings that can be used to categorise and group resources. The module add som tags by defalt which cannot be set manually (application, environment and terraform).
   EOT
-  default = {}
+  default     = {}
 
   validation {
-    condition = length(setintersection(keys(var.tags), ["application", "environment", "terraform"])) == 0
+    condition     = length(setintersection(keys(var.tags), ["application", "environment", "terraform"])) == 0
     error_message = "Validation failed: One or more tags conflict with default tags set by the module."
   }
 }
 
 variable "monitor_config" {
-  type        = object({
+  type = object({
     autoscale_settings  = optional(list(any), [])
     diagnostic_settings = optional(list(any), [])
     activity_log_alerts = optional(list(object({
-      name                                                         = string
-      formatted_name                                               = optional(string)
-      scopes                                                       = list(string)
-      description                                                  = optional(string)
-      enabled                                                      = optional(bool)
-      criteria                                                     = any
-      action                                                       = optional(any, [])
+      name           = string
+      formatted_name = optional(string)
+      scopes         = list(string)
+      description    = optional(string)
+      enabled        = optional(bool)
+      criteria       = any
+      action         = optional(any, [])
     })), [])
-    metric_alerts       = optional(list(object({
+    metric_alerts = optional(list(object({
       name                                                         = string
       formatted_name                                               = optional(string)
       scopes                                                       = list(string)

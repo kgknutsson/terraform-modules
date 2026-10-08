@@ -42,7 +42,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.named_values, {}),
         try(local.env_config.api_management.named_values, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           display_name         = k
           value                = null
@@ -82,11 +82,11 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.apis, {}),
         try(local.env_config.api_management.apis, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           revision              = 1
           api_type              = "http" // graphql, http, soap or websocket
-          source_api_id         = null // api_resource.id or api_resource.id;rev=<revision>
+          source_api_id         = null   // api_resource.id or api_resource.id;rev=<revision>
           display_name          = title(k)
           path                  = null
           protocols             = ["https"] // http, https, ws and wss
@@ -106,7 +106,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.products, {}),
         try(local.env_config.api_management.products, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           display_name          = null
           subscription_required = null
@@ -126,7 +126,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.backends, {}),
         try(local.env_config.api_management.backends, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           description = null
           protocol    = "http" //http or soap
@@ -148,7 +148,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.users, {}),
         try(local.env_config.api_management.users, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           confirmation = null
           note         = null
@@ -164,7 +164,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.subscriptions, {}),
         try(local.env_config.api_management.subscriptions, {})
-      )) : k => merge(
+        )) : k => merge(
         {
           api_id          = null
           product_id      = null
@@ -199,7 +199,7 @@ locals {
         for k in keys(merge(
           try(var.config.global.api_management.loggers, {}),
           try(local.env_config.api_management.loggers, {})
-        )) : k => merge(
+          )) : k => merge(
           {
             description          = null
             buffered             = null
@@ -235,12 +235,12 @@ locals {
 resource "azurecaf_name" "api_management" {
   count = length(local.config.sku_name[*])
 
-  name           = local.config.naming["azurerm_api_management"].name
-  resource_type  = "azurerm_api_management"
-  prefixes       = local.config.naming["azurerm_api_management"].prefixes
-  suffixes       = local.config.naming["azurerm_api_management"].suffixes
-  random_length  = local.config.naming["azurerm_api_management"].random_length
-  use_slug       = local.config.naming["azurerm_api_management"].use_slug
+  name          = local.config.naming["azurerm_api_management"].name
+  resource_type = "azurerm_api_management"
+  prefixes      = local.config.naming["azurerm_api_management"].prefixes
+  suffixes      = local.config.naming["azurerm_api_management"].suffixes
+  random_length = local.config.naming["azurerm_api_management"].random_length
+  use_slug      = local.config.naming["azurerm_api_management"].use_slug
 }
 
 resource "azurerm_api_management" "this" {
@@ -339,7 +339,7 @@ resource "azurerm_api_management_api_diagnostic" "this" {
       v.diagnostic
     ) if v.diagnostic != null
   }
-  
+
   api_name                  = azurerm_api_management_api.this[each.key].name
   api_management_name       = try(azurerm_api_management.this[0].name, data.azurerm_api_management.this[0].name)
   api_management_logger_id  = try(azurerm_api_management_logger.this[each.value.logger_id].id, each.value.logger_id)
@@ -491,7 +491,7 @@ resource "azurerm_api_management_api_operation" "this" {
       for i in coalescelist(
         keys(v.operations),
         ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
-      ) : join("_", [k, i]) => merge(
+        ) : join("_", [k, i]) => merge(
         {
           api_name            = k
           operation_id        = i
@@ -527,7 +527,7 @@ resource "azurerm_api_management_api_operation" "this" {
     }
   }
 
-  depends_on = [ azurerm_api_management_api.this ]
+  depends_on = [azurerm_api_management_api.this]
 }
 
 resource "azurerm_api_management_policy_fragment" "this" {
@@ -546,7 +546,7 @@ resource "azurerm_api_management_api_operation_policy" "this" {
       for i in coalescelist(
         keys(v.operations),
         ["DELETE", "GET", "HEAD", "OPTIONS", "PATH", "POST", "PUT", "TRACE"]
-      ) : join("_", [k, i]) => merge(
+        ) : join("_", [k, i]) => merge(
         {
           api_name     = k
           operation_id = i
@@ -563,7 +563,7 @@ resource "azurerm_api_management_api_operation_policy" "this" {
   xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
   xml_link            = try(each.value.xml_link, null)
 
-  depends_on = [ azurerm_api_management_api_operation.this ]
+  depends_on = [azurerm_api_management_api_operation.this]
 }
 
 resource "azurerm_api_management_api_policy" "this" {
@@ -575,7 +575,7 @@ resource "azurerm_api_management_api_policy" "this" {
   xml_content         = try(startswith(each.value.xml_content, "file:") ? file(format("%s/%s", path.root, split(":", each.value.xml_content)[1])) : each.value.xml_content, null)
   xml_link            = try(each.value.xml_link, null)
 
-  depends_on = [ azurerm_api_management_api.this, azurerm_api_management_backend.this ]
+  depends_on = [azurerm_api_management_api.this, azurerm_api_management_backend.this]
 }
 
 resource "azurerm_api_management_product" "this" {
@@ -617,7 +617,7 @@ resource "azurerm_api_management_product_api" "this" {
   product_id          = each.value.product_id
   api_name            = each.value.api_name
 
-  depends_on = [ azurerm_api_management_api.this, azurerm_api_management_product.this ]
+  depends_on = [azurerm_api_management_api.this, azurerm_api_management_product.this]
 }
 
 resource "azurerm_api_management_product_policy" "this" {
@@ -642,7 +642,7 @@ resource "azurerm_api_management_backend" "this" {
   resource_id         = try("https://management.azure.com${each.value.resource_id}", null)
 
   dynamic "credentials" {
-    for_each = [ for i in each.value.credentials[*] : merge(
+    for_each = [for i in each.value.credentials[*] : merge(
       {
         authorization = null
         certificate   = null
@@ -650,7 +650,7 @@ resource "azurerm_api_management_backend" "this" {
         query         = null
       },
       i
-    ) ]
+    )]
 
     content {
       certificate = credentials.value.certificate
@@ -658,13 +658,13 @@ resource "azurerm_api_management_backend" "this" {
       query       = credentials.value.query
 
       dynamic "authorization" {
-        for_each = [ for i in credentials.value.authorization[*] : merge(
+        for_each = [for i in credentials.value.authorization[*] : merge(
           {
             parameter = null
             scheme    = null
           },
           i
-        ) ]
+        )]
 
         content {
           parameter = authorization.value.parameter
@@ -881,6 +881,6 @@ resource "azurerm_api_management_diagnostic" "this" {
   }
 
   lifecycle {
-    replace_triggered_by = [ azurerm_api_management_logger.this[each.key] ]
+    replace_triggered_by = [azurerm_api_management_logger.this[each.key]]
   }
 }
