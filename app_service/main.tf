@@ -2261,7 +2261,7 @@ resource "azurerm_function_app_connection" "this" {
 resource "azurerm_role_assignment" "func" {
   count = local.config.type == "FunctionApp" && startswith(local.config.identity.type, "SystemAssigned") && var.storage_account != null ? 1 : 0
 
-  scope                            = var.storage_account.id
-  role_definition_name             = "Storage Blob Data Contributor"
-  principal_id                     = try(azapi_resource.flex_function[0], azurerm_linux_function_app.this[0], azurerm_windows_function_app.this[0]).identity[0].principal_id
+  scope                = var.storage_account.id
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = try(azapi_resource.flex_function[0], azurerm_linux_function_app.this[0], azurerm_windows_function_app.this[0]).identity[0].principal_id
 }

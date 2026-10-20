@@ -58,7 +58,7 @@ locals {
       for k in keys(merge(
         try(var.config.global.api_management.policy_fragments, {}),
         try(local.env_config.api_management.policy_fragments, {})
-      )) : k => {
+        )) : k => {
         description = try(
           local.env_config.api_management.policy_fragments[k].description,
           var.config.global.api_management.policy_fragments[k].description,
