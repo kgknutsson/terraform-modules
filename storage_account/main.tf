@@ -37,15 +37,15 @@ locals {
       try(local.env_config.storage_account.tags, {})
     )
 
-    account_kind                  = try(local.env_config.storage_account.account_kind, var.config.global.storage_account.account_kind, "StorageV2") // BlobStorage, BlockBlobStorage, FileStorage, Storage or StorageV2
-    account_tier                  = try(local.env_config.storage_account.account_tier, var.config.global.storage_account.account_tier, null) // Standard or Premium
-    account_replication_type      = try(local.env_config.storage_account.account_replication_type, var.config.global.storage_account.account_replication_type, "LRS") // LRS, GRS, RAGRS, ZRS, GZRS or RAGZRS
-    access_tier                   = try(local.env_config.storage_account.access_tier, var.config.global.storage_account.access_tier, "Hot") // Hot or Cold
-    min_tls_version               = try(local.env_config.storage_account.min_tls_version, var.config.global.storage_account.min_tls_version, "TLS1_2") // TLS1_0, TLS1_1, or TLS1_2
-    shared_access_key_enabled     = try(local.env_config.storage_account.shared_access_key_enabled, var.config.global.storage_account.shared_access_key_enabled, true)
-    public_network_access_enabled = try(local.env_config.storage_account.public_network_access_enabled, var.config.global.storage_account.public_network_access_enabled, true)
-    is_hns_enabled                = try(local.env_config.storage_account.is_hns_enabled, var.config.global.storage_account.is_hns_enabled, false)
-    sftp_enabled                  = try(local.env_config.storage_account.sftp_enabled, var.config.global.storage_account.sftp_enabled, false)
+    account_kind              = try(local.env_config.storage_account.account_kind, var.config.global.storage_account.account_kind, "StorageV2") // BlobStorage, BlockBlobStorage, FileStorage, Storage or StorageV2
+    account_tier              = try(local.env_config.storage_account.account_tier, var.config.global.storage_account.account_tier, null) // Standard or Premium
+    account_replication_type  = try(local.env_config.storage_account.account_replication_type, var.config.global.storage_account.account_replication_type, "LRS") // LRS, GRS, RAGRS, ZRS, GZRS or RAGZRS
+    access_tier               = try(local.env_config.storage_account.access_tier, var.config.global.storage_account.access_tier, "Hot") // Hot or Cold
+    min_tls_version           = try(local.env_config.storage_account.min_tls_version, var.config.global.storage_account.min_tls_version, "TLS1_2") // TLS1_0, TLS1_1, or TLS1_2
+    shared_access_key_enabled = try(local.env_config.storage_account.shared_access_key_enabled, var.config.global.storage_account.shared_access_key_enabled, false)
+    public_network_access     = try(local.env_config.storage_account.public_network_access, var.config.global.storage_account.public_network_access, "Disabled") // Enabled, Disabled or SecuredByPerimeter
+    is_hns_enabled            = try(local.env_config.storage_account.is_hns_enabled, var.config.global.storage_account.is_hns_enabled, false)
+    sftp_enabled              = try(local.env_config.storage_account.sftp_enabled, var.config.global.storage_account.sftp_enabled, false)
 
     network_rules = try(local.env_config.storage_account.network_rules, var.config.global.storage_account.network_rules, null) == null ? null : {
       bypass                     = coalescelist(tolist(setunion(try(local.env_config.storage_account.network_rules.bypass, []), try(var.config.global.storage_account.network_rules.bypass, []))), ["None"])  // Combination of Logging, Metrics, AzureServices, or None
@@ -90,19 +90,19 @@ resource "azurecaf_name" "storage_account" {
 resource "azurerm_storage_account" "this" {
   count = length(azurecaf_name.storage_account)
 
-  name                          = azurecaf_name.storage_account.0.result
-  resource_group_name           = local.config.resource_group_name
-  location                      = local.config.location
-  account_kind                  = local.config.account_kind
-  account_tier                  = local.config.account_tier
-  account_replication_type      = local.config.account_replication_type
-  access_tier                   = local.config.access_tier
-  min_tls_version               = local.config.min_tls_version
-  shared_access_key_enabled     = local.config.shared_access_key_enabled
-  public_network_access_enabled = local.config.public_network_access_enabled
-  is_hns_enabled                = local.config.is_hns_enabled
-  sftp_enabled                  = local.config.sftp_enabled
-  tags                          = local.config.tags
+  name                      = azurecaf_name.storage_account.0.result
+  resource_group_name       = local.config.resource_group_name
+  location                  = local.config.location
+  account_kind              = local.config.account_kind
+  account_tier              = local.config.account_tier
+  account_replication_type  = local.config.account_replication_type
+  access_tier               = local.config.access_tier
+  min_tls_version           = local.config.min_tls_version
+  shared_access_key_enabled = local.config.shared_access_key_enabled
+  public_network_access     = local.config.public_network_access
+  is_hns_enabled            = local.config.is_hns_enabled
+  sftp_enabled              = local.config.sftp_enabled
+  tags                      = local.config.tags
 
   dynamic "network_rules" {
     for_each = local.config.network_rules[*]
@@ -125,7 +125,7 @@ resource "azurerm_storage_container" "this" {
   for_each = { for k, v in local.config.storage_containers : k => v if length(azurerm_storage_account.this) > 0 }
 
   name                  = each.key
-  storage_account_name  = azurerm_storage_account.this.0.name
+  storage_account_id    = azurerm_storage_account.this[0].id
   container_access_type = each.value.container_access_type
   metadata              = each.value.metadata
 }

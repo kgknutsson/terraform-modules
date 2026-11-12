@@ -102,11 +102,11 @@ locals {
 
     insights = {
       application_type              = try(local.env_config.app_service.insights.application_type, var.config.global.app_service.insights.application_type, "java")
-      disable_ip_masking            = try(local.env_config.app_service.insights.disable_ip_masking, var.config.global.app_service.insights.disable_ip_masking, false)
+      ip_masking_enabled            = try(local.env_config.app_service.insights.ip_masking_enabled, var.config.global.app_service.insights.ip_masking_enabled, true)
       daily_data_cap_in_gb          = try(local.env_config.app_service.insights.daily_data_cap_in_gb, var.config.global.app_service.insights.daily_data_cap_in_gb, 5)
       sampling_percentage           = try(local.env_config.app_service.insights.sampling_percentage, var.config.global.app_service.insights.sampling_percentage, null)
       retention_in_days             = try(local.env_config.app_service.insights.retention_in_days, var.config.global.app_service.insights.retention_in_days, null)
-      local_authentication_disabled = try(local.env_config.app_service.insights.local_authentication_disabled, var.config.global.app_service.insights.local_authentication_disabled, null)
+      local_authentication_enabled  = try(local.env_config.app_service.insights.local_authentication_enabled, var.config.global.app_service.insights.local_authentication_enabled, null)
       internet_ingestion_enabled    = try(local.env_config.app_service.insights.internet_ingestion_enabled, var.config.global.app_service.insights.internet_ingestion_enabled, true)
       internet_query_enabled        = try(local.env_config.app_service.insights.internet_query_enabled, var.config.global.app_service.insights.internet_query_enabled, true)
       workspace_id                  = try(local.env_config.app_service.insights.workspace_id, var.config.global.app_service.insights.workspace_id, var.app_service.application_insights_workspace_id, null)
@@ -241,7 +241,6 @@ locals {
             python                      = null
             python_version              = null
             powershell_core_version     = null
-            ruby_version                = null
           },
           try(
             local.env_config.app_service.site_config.application_stack,
@@ -408,19 +407,19 @@ resource "azurecaf_name" "application_insights" {
 resource "azurerm_application_insights" "this" {
   count = length(azurecaf_name.application_insights)
 
-  name                          = azurecaf_name.application_insights.0.result
-  resource_group_name           = local.config.resource_group_name
-  location                      = local.config.location
-  tags                          = local.config.tags
-  application_type              = local.config.insights.application_type
-  daily_data_cap_in_gb          = local.config.insights.daily_data_cap_in_gb
-  disable_ip_masking            = local.config.insights.disable_ip_masking
-  sampling_percentage           = local.config.insights.sampling_percentage
-  retention_in_days             = local.config.insights.retention_in_days
-  local_authentication_disabled = local.config.insights.local_authentication_disabled
-  internet_ingestion_enabled    = local.config.insights.internet_ingestion_enabled
-  internet_query_enabled        = local.config.insights.internet_query_enabled
-  workspace_id                  = local.config.insights.workspace_id
+  name                         = azurecaf_name.application_insights.0.result
+  resource_group_name          = local.config.resource_group_name
+  location                     = local.config.location
+  tags                         = local.config.tags
+  application_type             = local.config.insights.application_type
+  daily_data_cap_in_gb         = local.config.insights.daily_data_cap_in_gb
+  ip_masking_enabled           = local.config.insights.ip_masking_enabled
+  sampling_percentage          = local.config.insights.sampling_percentage
+  retention_in_days            = local.config.insights.retention_in_days
+  local_authentication_enabled = local.config.insights.local_authentication_enabled
+  internet_ingestion_enabled   = local.config.insights.internet_ingestion_enabled
+  internet_query_enabled       = local.config.insights.internet_query_enabled
+  workspace_id                 = local.config.insights.workspace_id
 }
 
 resource "azurecaf_name" "monitor_private_link_scope" {
@@ -594,7 +593,7 @@ resource "azurerm_linux_web_app" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -609,7 +608,6 @@ resource "azurerm_linux_web_app" "this" {
         node_version             = application_stack.value.node_version
         php_version              = application_stack.value.php_version
         python_version           = application_stack.value.python_version
-        ruby_version             = application_stack.value.ruby_version
       }
     }
 
@@ -835,7 +833,7 @@ resource "azurerm_linux_web_app_slot" "this" {
     }
 
     dynamic "application_stack" {
-      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version, i.ruby_version)) ]
+      for_each = [ for i in local.config.site_config.application_stack[*] : i if can(coalesce(i.docker_image_name, i.dotnet_version, i.go_version, i.java_version, i.node_version, i.php_version, i.python_version)) ]
 
       content {
         docker_image_name        = application_stack.value.docker_image_name
@@ -850,7 +848,6 @@ resource "azurerm_linux_web_app_slot" "this" {
         node_version             = application_stack.value.node_version
         php_version              = application_stack.value.php_version
         python_version           = application_stack.value.python_version
-        ruby_version             = application_stack.value.ruby_version
       }
     }
 

@@ -71,7 +71,7 @@ locals {
         {
           tls = merge(
             {
-              minimum_tls_version      = null // TLS10 or TLS12, defaults to TLS12
+              minimum_version          = null // TLS10 or TLS12, defaults to TLS12
               key_vault_certificate_id = null
             },
             try(local.env_config.cdn_frontdoor.custom_domains[k].tls, {}),
@@ -162,21 +162,21 @@ locals {
             for n, m in merge(
               try(local.env_config.cdn_frontdoor.rule_sets[k], {}),
               try(var.config.global.cdn_frontdoor.rule_sets[k], {})
-            ) : n => regex("^(?P<redirect_protocol>[^:/?#]+)://(?P<destination_hostname>[^/?#]*)(?P<destination_path>[^?#]*)?[?]?(?P<query_string>[^#]*)?#?(?P<destination_fragment>.*)?", m) if k == "redirects"
+            ) : n => regex("^(?P<redirect_protocol>[^:/?#]+)://(?P<destination_host_name>[^/?#]*)(?P<destination_path>[^?#]*)?[?]?(?P<query_string>[^#]*)?#?(?P<destination_fragment>.*)?", m) if k == "redirects"
           } : replace(x, ".", "-") => {
             actions = {
-              url_redirect_action = {
-                redirect_type        = "Moved"
-                redirect_protocol    = title(y.redirect_protocol)
-                destination_hostname = y.destination_hostname
-                destination_path     = trimsuffix(y.destination_path, "/") == "" ? null : y.destination_path
-                query_string         = y.query_string == "" ? null : y.query_string
-                destination_fragment = y.destination_fragment == "" ? null : y.destination_fragment
+              url_redirect = {
+                redirect_type         = "Moved"
+                redirect_protocol     = title(y.redirect_protocol)
+                destination_host_name = y.destination_host_name
+                destination_path      = trimsuffix(y.destination_path, "/") == "" ? null : y.destination_path
+                query_string          = y.query_string == "" ? null : y.query_string
+                destination_fragment  = y.destination_fragment == "" ? null : y.destination_fragment
               }
             }
             conditions = {
-              host_name_condition = {
-                match_values = [x]
+              host_name = {
+                values = [x]
               }
             }
           }
@@ -331,7 +331,7 @@ resource "azurerm_cdn_frontdoor_custom_domain" "this" {
 
   tls {
     certificate_type        = each.value.tls.key_vault_certificate_id == null ? "ManagedCertificate" : "CustomerCertificate"
-    minimum_tls_version     = each.value.tls.minimum_tls_version
+    minimum_version         = each.value.tls.minimum_version
     cdn_frontdoor_secret_id = each.value.tls.key_vault_certificate_id != null ? azurerm_cdn_frontdoor_secret.this[each.key].id : null
   }
 }
@@ -439,20 +439,20 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
     for k, v in local.config.rule_sets : {
       for x, y in v : x => merge(
         {
-          order             = try(y.conditions, null) == null ? 0 : index(keys(v), x) + 1
-          rule_set          = k
-          conditions        = null
-          behavior_on_match = null
+          order              = try(y.conditions, null) == null ? 0 : index(keys(v), x) + 1
+          rule_set           = k
+          conditions         = null
+          behaviour_on_match = null
         },
         y,
         {
           actions = merge(
             {
-              url_rewrite_action                  = null
-              url_redirect_action                 = null
-              route_configuration_override_action = null
-              request_header_action               = null
-              response_header_action              = null
+              url_rewrite                  = null
+              url_redirect                 = null
+              route_configuration_override = null
+              modify_request_header        = null
+              modify_response_header       = null
             },
             try(y.actions, {})
           )
@@ -464,42 +464,46 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
   name                      = replace(each.key, "-", "")
   cdn_frontdoor_rule_set_id = azurerm_cdn_frontdoor_rule_set.this[each.value.rule_set].id
   order                     = each.value.order
-  behavior_on_match         = each.value.behavior_on_match
+  behaviour_on_match        = each.value.behaviour_on_match
 
   actions {
-    dynamic "url_redirect_action" {
-      for_each = each.value.actions.url_redirect_action[*]
+    dynamic "url_redirect" {
+      for_each = each.value.actions.url_redirect[*]
 
       content {
-        destination_hostname = try(url_redirect_action.value.destination_hostname, "")
-        destination_path     = try(url_redirect_action.value.destination_path, null)
-        query_string         = try(url_redirect_action.value.query_string, null)
-        destination_fragment = try(url_redirect_action.value.destination_fragment, null)
-        redirect_type        = try(url_redirect_action.value.redirect_type, "Moved")
-        redirect_protocol    = try(url_redirect_action.value.redirect_protocol, "Https")
+        destination_host_name = try(url_redirect.value.destination_host_name, null)
+        destination_path      = try(url_redirect.value.destination_path, null)
+        query_string          = try(url_redirect.value.query_string, null)
+        destination_fragment  = try(url_redirect.value.destination_fragment, null)
+        redirect_type         = try(url_redirect.value.redirect_type, "Moved")
+        redirect_protocol     = try(url_redirect.value.redirect_protocol, "Https")
       }
     }
 
-    dynamic "route_configuration_override_action" {
-      for_each = each.value.actions.route_configuration_override_action[*]
+    dynamic "route_configuration_override" {
+      for_each = each.value.actions.route_configuration_override[*]
 
       content {
-        cache_duration                = try(route_configuration_override_action.value.cache_duration, null)
-        cdn_frontdoor_origin_group_id = try(azurerm_cdn_frontdoor_origin_group.this[route_configuration_override_action.value.cdn_frontdoor_origin_group_id].id, null)
-        forwarding_protocol           = try(route_configuration_override_action.value.forwarding_protocol, "MatchRequest")
-        query_string_caching_behavior = try(route_configuration_override_action.value.query_string_caching_behavior, "IgnoreQueryString")
-        query_string_parameters       = try(route_configuration_override_action.value.query_string_parameters, null)
-        compression_enabled           = try(route_configuration_override_action.value.compression_enabled, null)
-        cache_behavior                = try(route_configuration_override_action.value.cache_behavior, "HonorOrigin")
+        origin_group {
+          cdn_frontdoor_origin_group_id = try(azurerm_cdn_frontdoor_origin_group.this[route_configuration_override.value.origin_group.cdn_frontdoor_origin_group_id].id, null)
+          forwarding_protocol           = try(route_configuration_override.value.origin_group.forwarding_protocol, "MatchRequest")
+        }
+        caching {
+          query_string_behaviour  = try(route_configuration_override.value.caching.query_string_caching_behavior, "IgnoreQueryString")
+          query_string_parameters = try(route_configuration_override.value.caching.query_string_parameters, null)
+          compression_enabled     = try(route_configuration_override.value.caching.compression_enabled, null)
+          behaviour               = try(route_configuration_override.value.caching.cache_behavior, "HonorOrigin")
+          duration                = try(route_configuration_override.value.caching.cache_duration, null)
+        }
       }
     }
 
-    dynamic "request_header_action" {
-      for_each = each.value.actions.request_header_action[*]
+    dynamic "modify_request_header" {
+      for_each = each.value.actions.modify_request_header[*]
       content {
-        header_action = try(request_header_action.value.header_action, "Overwrite")
-        header_name   = request_header_action.value.header_name
-        value         = try(request_header_action.value.value, null)
+        operator      = try(modify_request_header.value.operator, "Overwrite")
+        header_name   = modify_request_header.value.header_name
+        header_value  = try(modify_request_header.value.header_value, null)
       }
     }
 
@@ -510,25 +514,23 @@ resource "azurerm_cdn_frontdoor_rule" "this" {
     for_each = each.value.conditions[*]
 
     content {
-      dynamic "host_name_condition" {
-        for_each = try(conditions.value.host_name_condition[*], {})
+      dynamic "host_name" {
+        for_each = try(conditions.value.host_name[*], {})
 
         content {
-          operator         = try(host_name_condition.value.operator, "Equal")
-          match_values     = try(host_name_condition.value.match_values, [])
-          transforms       = try(host_name_condition.value.transforms, null)
-          negate_condition = try(host_name_condition.value.negate_condition, null)
+          operator   = try(host_name.value.operator, "Equal")
+          transforms = try(host_name.value.transforms, null)
+          values     = try(host_name.value.values, [])
         }
       }
 
-      dynamic "request_uri_condition" {
-        for_each = try(conditions.value.request_uri_condition[*], {})
+      dynamic "request_url" {
+        for_each = try(conditions.value.request_url[*], {})
 
         content {
-          operator         = try(request_uri_condition.value.operator, "Equal")
-          match_values     = try(request_uri_condition.value.match_values, [])
-          transforms       = try(request_uri_condition.value.transforms, null)
-          negate_condition = try(request_uri_condition.value.negate_condition, null)
+          operator         = try(request_url.value.operator, "Equal")
+          values           = try(request_url.value.values, [])
+          transforms       = try(request_url.value.transforms, null)
         }
       }
 

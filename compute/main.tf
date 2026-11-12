@@ -63,10 +63,10 @@ locals {
         keys(try(local.env_config.compute.network_interfaces, {})),
         keys(try(var.config.global.compute.network_interfaces, {}))
       )) : v => {
-        primary                       = try(local.env_config.compute.network_interfaces[v].primary, var.config.global.compute.network_interfaces[v].primary, i == 0)
-        enable_accelerated_networking = try(local.env_config.compute.network_interfaces[v].enable_accelerated_networking, var.config.global.compute.network_interfaces[v].enable_accelerated_networking, null)
-        network_security_group_id     = try(local.env_config.compute.network_interfaces[v].network_security_group_id, var.config.global.compute.network_interfaces[v].network_security_group_id, null)
-        ip_configurations             = try(local.env_config.compute.network_interfaces[v].ip_configurations, var.config.global.compute.network_interfaces[v].ip_configurations)
+        primary                        = try(local.env_config.compute.network_interfaces[v].primary, var.config.global.compute.network_interfaces[v].primary, i == 0)
+        accelerated_networking_enabled = try(local.env_config.compute.network_interfaces[v].accelerated_networking_enabled, var.config.global.compute.network_interfaces[v].accelerated_networking_enabled, null)
+        network_security_group_id      = try(local.env_config.compute.network_interfaces[v].network_security_group_id, var.config.global.compute.network_interfaces[v].network_security_group_id, null)
+        ip_configurations              = try(local.env_config.compute.network_interfaces[v].ip_configurations, var.config.global.compute.network_interfaces[v].ip_configurations)
       } if try(local.env_config.compute.type, var.config.global.compute.type, null) != null
     }
 
@@ -167,10 +167,10 @@ resource "azurerm_linux_virtual_machine_scale_set" "this" {
     for_each = local.config.network_interfaces
 
     content {
-      name                          = azurecaf_name.network_interface[network_interface.key].result
-      primary                       = network_interface.value.primary
-      enable_accelerated_networking = network_interface.value.enable_accelerated_networking
-      network_security_group_id     = network_interface.value.network_security_group_id
+      name                           = azurecaf_name.network_interface[network_interface.key].result
+      primary                        = network_interface.value.primary
+      accelerated_networking_enabled = network_interface.value.accelerated_networking_enabled
+      network_security_group_id      = network_interface.value.network_security_group_id
 
       dynamic "ip_configuration" {
         for_each = network_interface.value.ip_configurations
