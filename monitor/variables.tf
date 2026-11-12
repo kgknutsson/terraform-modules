@@ -51,19 +51,27 @@ variable "tags" {
 }
 
 variable "monitor_config" {
-  type        = object({
-    autoscale_settings  = optional(list(any), [])
-    diagnostic_settings = optional(list(any), [])
-    activity_log_alerts = optional(list(object({
-      name                                                         = string
-      formatted_name                                               = optional(string)
-      scopes                                                       = list(string)
-      description                                                  = optional(string)
-      enabled                                                      = optional(bool)
-      criteria                                                     = any
-      action                                                       = optional(any, [])
+  type = object({
+    autoscale_settings = optional(list(any), [])
+    diagnostic_settings = optional(list(object({
+      name                           = string
+      target_resource_id             = string
+      log_analytics_workspace_id     = optional(string)
+      log_analytics_destination_type = optional(string)
+      log_category_groups            = optional(list(string), [])
+      log_category_types             = optional(list(string))
+      metrics                        = optional(list(string))
     })), [])
-    metric_alerts       = optional(list(object({
+    activity_log_alerts = optional(list(object({
+      name           = string
+      formatted_name = optional(string)
+      scopes         = list(string)
+      description    = optional(string)
+      enabled        = optional(bool)
+      criteria       = any
+      action         = optional(any, [])
+    })), [])
+    metric_alerts = optional(list(object({
       name                                                         = string
       formatted_name                                               = optional(string)
       scopes                                                       = list(string)

@@ -17,10 +17,11 @@ output "monitor_config" {
   value = {
     diagnostic_settings = [
       for i in azurerm_servicebus_namespace.this : {
-        name               = "SendToLogAnalytics"
-        target_resource_id = i.id
-        log_category_types = null
-        metrics            = null
+        name                = "SendToLogAnalytics"
+        target_resource_id  = i.id
+        log_category_groups = null
+        log_category_types  = null
+        metrics             = null
       }
     ]
   }

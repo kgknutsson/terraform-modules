@@ -8,10 +8,11 @@ output "monitor_config" {
     diagnostic_settings = try(
       [
         {
-          name               = "SendToLogAnalytics"
-          target_resource_id = azurerm_key_vault.this.0.id
-          log_category_types = null
-          metrics            = null
+          name                = "SendToLogAnalytics"
+          target_resource_id  = azurerm_key_vault.this.0.id
+          log_category_groups = null
+          log_category_types  = null
+          metrics             = null
         }
       ],
       []
