@@ -23,7 +23,7 @@ locals {
     capacity = try(local.env_config.application_gateway.capacity, var.config.global.application_gateway.capacity, 1)
 
     gateway_ip_configuration = {
-      name      = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
+      name = try(local.env_config.application_gateway.gateway_ip_configuration.name, var.config.global.application_gateway.gateway_ip_configuration.name, null)
       subnet_id = try(
         var.virtual_network.subnet_id_map[local.env_config.application_gateway.gateway_ip_configuration.subnet_id],
         local.env_config.application_gateway.gateway_ip_configuration.subnet_id,
@@ -55,7 +55,7 @@ locals {
       {
         sku               = "Standard" // Basic or Standard
         sku_tier          = "Regional" // Regional or Global
-        allocation_method = "Static" // Static or Dynamic
+        allocation_method = "Static"   // Static or Dynamic
         domain_name_label = null
         zones             = []
       },
@@ -67,7 +67,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.frontend_ip_configurations, []),
         try(local.env_config.application_gateway.frontend_ip_configurations, [])
-      ) : merge(
+        ) : merge(
         {
           type = "Public"
         },
@@ -84,7 +84,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.ssl_certificates, []),
         try(local.env_config.application_gateway.ssl_certificates, [])
-      ) : merge(
+        ) : merge(
         {
           data                = null
           password            = null
@@ -98,7 +98,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.http_listeners, []),
         try(local.env_config.application_gateway.http_listeners, [])
-      ) : merge(
+        ) : merge(
         {
           frontend_ip_configuration = "public"
           frontend_port             = null
@@ -115,7 +115,7 @@ locals {
       for i, v in concat(
         try(var.config.global.application_gateway.request_routing_rules, []),
         try(local.env_config.application_gateway.request_routing_rules, [])
-      ) : merge(
+        ) : merge(
         {
           http_listener          = null
           backend_address_pool   = null
@@ -133,7 +133,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.backend_address_pools, []),
         try(local.env_config.application_gateway.backend_address_pools, [])
-      ) : merge(
+        ) : merge(
         {
           fqdns        = null
           ip_addresses = null
@@ -146,7 +146,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.backend_http_settings, []),
         try(local.env_config.application_gateway.backend_http_settings, [])
-      ) : merge(
+        ) : merge(
         {
           cookie_based_affinity               = "Disabled"
           affinity_cookie_name                = null
@@ -169,7 +169,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.probes, []),
         try(local.env_config.application_gateway.probes, [])
-      ) : merge(
+        ) : merge(
         {
           protocol                                  = "Http"
           port                                      = null
@@ -187,20 +187,20 @@ locals {
     ]
 
     authentication_certificates = concat(
-        try(var.config.global.application_gateway.authentication_certificates, []),
-        try(local.env_config.application_gateway.authentication_certificates, [])
+      try(var.config.global.application_gateway.authentication_certificates, []),
+      try(local.env_config.application_gateway.authentication_certificates, [])
     )
 
     trusted_root_certificates = concat(
-        try(var.config.global.application_gateway.trusted_root_certificates, []),
-        try(local.env_config.application_gateway.trusted_root_certificates, [])
+      try(var.config.global.application_gateway.trusted_root_certificates, []),
+      try(local.env_config.application_gateway.trusted_root_certificates, [])
     )
 
     redirect_configurations = [
       for v in concat(
         try(var.config.global.application_gateway.redirect_configurations, []),
         try(local.env_config.application_gateway.redirect_configurations, [])
-      ) : merge(
+        ) : merge(
         {
           redirect_type        = "Permanent" // Permanent, Temporary, Found or SeeOther
           target_listener      = null
@@ -216,8 +216,8 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.rewrite_rule_sets, []),
         try(local.env_config.application_gateway.rewrite_rule_sets, [])
-      ) : {
-        name          = v.name
+        ) : {
+        name = v.name
 
         rewrite_rules = [
           for v in v.rewrite_rules : merge(
@@ -238,7 +238,7 @@ locals {
       for v in concat(
         try(var.config.global.application_gateway.url_path_maps, []),
         try(local.env_config.application_gateway.url_path_maps, [])
-      ) : {
+        ) : {
         name                           = v.name
         default_backend_address_pool   = try(v.default_backend_address_pool, null)
         default_backend_http_settings  = try(v.default_backend_http_settings, null)
@@ -263,7 +263,7 @@ locals {
 }
 
 data "azurerm_key_vault_certificate" "this" {
-  for_each = toset([ for v in concat(local.config.ssl_certificates, local.config.trusted_root_certificates) : v.name if v.key_vault_secret_id == null && v.data == null ])
+  for_each = toset([for v in concat(local.config.ssl_certificates, local.config.trusted_root_certificates) : v.name if v.key_vault_secret_id == null && v.data == null])
 
   name         = each.value
   key_vault_id = var.key_vault.id
@@ -323,7 +323,7 @@ resource "azurerm_application_gateway" "this" {
   tags                = local.config.tags
 
   identity {
-    type = "UserAssigned"
+    type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.this.id]
   }
 
@@ -363,7 +363,7 @@ resource "azurerm_application_gateway" "this" {
   }
 
   dynamic "frontend_port" {
-    for_each = toset(concat(local.config.frontend_ports, [ for v in local.config.http_listeners : { name = null , port = v.ssl_certificate == null ? 80 : 443 } if v.frontend_port == null ]))
+    for_each = toset(concat(local.config.frontend_ports, [for v in local.config.http_listeners : { name = null, port = v.ssl_certificate == null ? 80 : 443 } if v.frontend_port == null]))
 
     content {
       name = coalesce(frontend_port.value.name, "port${frontend_port.value.port}")
@@ -451,7 +451,7 @@ resource "azurerm_application_gateway" "this" {
         for_each = backend_http_settings.value.connection_draining[*]
 
         content {
-          enabled = connection_draining.value.enabled
+          enabled           = connection_draining.value.enabled
           drain_timeout_sec = connection_draining.value.drain_timeout_sec
         }
       }

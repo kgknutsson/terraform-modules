@@ -22,7 +22,7 @@ locals {
     naming = {
       for i in [
         "azurerm_redis_cache",
-      ] : i => merge(
+        ] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -78,12 +78,12 @@ resource "azurerm_user_assigned_identity" "this" {
 resource "azurecaf_name" "redis_cache" {
   count = length(local.config.sku_name[*])
 
-  name           = local.config.naming["azurerm_redis_cache"].name
+  name          = local.config.naming["azurerm_redis_cache"].name
   resource_type = "azurerm_redis_cache"
-  prefixes       = local.config.naming["azurerm_redis_cache"].prefixes
-  suffixes       = local.config.naming["azurerm_redis_cache"].suffixes
-  random_length  = local.config.naming["azurerm_redis_cache"].random_length
-  use_slug       = local.config.naming["azurerm_redis_cache"].use_slug
+  prefixes      = local.config.naming["azurerm_redis_cache"].prefixes
+  suffixes      = local.config.naming["azurerm_redis_cache"].suffixes
+  random_length = local.config.naming["azurerm_redis_cache"].random_length
+  use_slug      = local.config.naming["azurerm_redis_cache"].use_slug
 }
 
 resource "azurerm_redis_cache" "this" {
@@ -147,5 +147,5 @@ resource "azurerm_redis_cache_access_policy_assignment" "this" {
   object_id          = each.value.object_id
   object_id_alias    = try(each.value.object_id_alias, each.key)
 
-  depends_on = [ azurerm_redis_cache_access_policy.this ]
+  depends_on = [azurerm_redis_cache_access_policy.this]
 }

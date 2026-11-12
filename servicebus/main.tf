@@ -22,7 +22,7 @@ locals {
     naming = {
       for i in [
         "azurerm_servicebus_namespace",
-      ] : i => merge(
+        ] : i => merge(
         {
           name          = var.config.global.name
           prefixes      = null
@@ -42,7 +42,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.servicebus.authorization_rules), []),
         try(keys(var.config.global.servicebus.authorization_rules), [])
-      ) : k => merge(
+        ) : k => merge(
         {
           listen = false
           send   = false
@@ -57,7 +57,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.servicebus.queues), []),
         try(keys(var.config.global.servicebus.queues), [])
-      ) : k => merge(
+        ) : k => merge(
         {},
         try(local.env_config.servicebus.queues[k], {}),
         try(var.config.global.servicebus.queues[k], {}),
@@ -66,7 +66,7 @@ locals {
             for i in setunion(
               try(keys(local.env_config.servicebus.queues[k].authorization_rules), []),
               try(keys(var.config.global.servicebus.queues[k].authorization_rules), [])
-            ) : join("-", [k, i]) => merge(
+              ) : join("-", [k, i]) => merge(
               {
                 name   = i
                 listen = false
@@ -92,7 +92,7 @@ locals {
       for k in setunion(
         try(keys(local.env_config.servicebus.topics), []),
         try(keys(var.config.global.servicebus.topics), [])
-      ) : k => merge(
+        ) : k => merge(
         {},
         try(local.env_config.servicebus.topics[k], {}),
         try(var.config.global.servicebus.topics[k], {}),
@@ -101,7 +101,7 @@ locals {
             for i in setunion(
               try(keys(local.env_config.servicebus.topics[k].authorization_rules), []),
               try(keys(var.config.global.servicebus.topics[k].authorization_rules), [])
-            ) : join("-", [k, i]) => merge(
+              ) : join("-", [k, i]) => merge(
               {
                 name   = i
                 listen = false
@@ -128,12 +128,12 @@ locals {
 resource "azurecaf_name" "servicebus_namespace" {
   count = length(local.config.sku[*])
 
-  name           = local.config.naming["azurerm_servicebus_namespace"].name
+  name          = local.config.naming["azurerm_servicebus_namespace"].name
   resource_type = "azurerm_servicebus_namespace"
-  prefixes       = local.config.naming["azurerm_servicebus_namespace"].prefixes
-  suffixes       = local.config.naming["azurerm_servicebus_namespace"].suffixes
-  random_length  = local.config.naming["azurerm_servicebus_namespace"].random_length
-  use_slug       = local.config.naming["azurerm_servicebus_namespace"].use_slug
+  prefixes      = local.config.naming["azurerm_servicebus_namespace"].prefixes
+  suffixes      = local.config.naming["azurerm_servicebus_namespace"].suffixes
+  random_length = local.config.naming["azurerm_servicebus_namespace"].random_length
+  use_slug      = local.config.naming["azurerm_servicebus_namespace"].use_slug
 }
 
 resource "azurerm_servicebus_namespace" "this" {
@@ -165,14 +165,14 @@ resource "azurerm_servicebus_queue" "this" {
 }
 
 resource "azurerm_servicebus_queue_authorization_rule" "this" {
-  for_each = merge([ for k, v in local.config.queues : {
+  for_each = merge([for k, v in local.config.queues : {
     for x, y in v.authorization_rules : x => merge(
       {
         queue_id = azurerm_servicebus_queue.this[k].id
       },
       y
     )
-  } if length(azurerm_servicebus_namespace.this) > 0 ]...)
+  } if length(azurerm_servicebus_namespace.this) > 0]...)
 
   name     = each.value.name
   queue_id = each.value.queue_id
@@ -189,14 +189,14 @@ resource "azurerm_servicebus_topic" "this" {
 }
 
 resource "azurerm_servicebus_topic_authorization_rule" "this" {
-  for_each = merge([ for k, v in local.config.topics : {
+  for_each = merge([for k, v in local.config.topics : {
     for x, y in v.authorization_rules : x => merge(
       {
         topic_id = azurerm_servicebus_topic.this[k].id
       },
       y
     )
-  } if length(azurerm_servicebus_namespace.this) > 0 ]...)
+  } if length(azurerm_servicebus_namespace.this) > 0]...)
 
   name     = each.value.name
   topic_id = each.value.topic_id

@@ -1,5 +1,5 @@
 output "id" {
-  value = try(azurerm_api_management.this[0].id, data.azurerm_api_management.this[0].id, null)
+  value       = try(azurerm_api_management.this[0].id, data.azurerm_api_management.this[0].id, null)
   description = "Id of the API Management instance."
 }
 
