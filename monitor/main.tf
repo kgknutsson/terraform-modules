@@ -1,3 +1,5 @@
+data "azurerm_subscription" "this" {}
+
 locals {
   env_config = lookup(var.config, var.environment, {})
 
@@ -8,9 +10,12 @@ locals {
 
     tags = merge(
       {
-        application = var.config.global.name
-        environment = var.environment
-        terraform   = "true"
+        for k, v in data.azurerm_subscription.this.tags : k => v if contains(["billing_contact_email", "technical_contact_email"], k)
+      },
+      {
+        environment  = var.environment
+        service_name = var.config.global.name
+        tooling      = "Terraform"
       },
       var.tags,
       try(var.config.global.tags, {}),
@@ -113,32 +118,44 @@ resource "azurerm_monitor_autoscale_setting" "this" {
 }
 
 data "azurerm_monitor_diagnostic_categories" "this" {
-  for_each = { for i in local.config.diagnostic_settings : i.name => i.target_resource_id }
+  for_each = { for i in local.config.diagnostic_settings : join(".", [provider::azurerm::parse_resource_id(i.target_resource_id).resource_name, i.name]) => i.target_resource_id }
 
   resource_id = each.value
 }
 
 resource "azurerm_monitor_diagnostic_setting" "this" {
-  for_each = { for i in local.config.diagnostic_settings : i.name => i if try(i.log_analytics_workspace_id, local.config.log_analytics_workspace_id) != null }
+  for_each = { for i in local.config.diagnostic_settings : join(".", [provider::azurerm::parse_resource_id(i.target_resource_id).resource_name, i.name]) => i if try(coalesce(i.log_analytics_workspace_id, local.config.log_analytics_workspace_id), null) != null }
 
   name                           = each.value.name
   target_resource_id             = each.value.target_resource_id
-  log_analytics_workspace_id     = try(each.value.log_analytics_workspace_id, local.config.log_analytics_workspace_id)
+  log_analytics_workspace_id     = coalesce(each.value.log_analytics_workspace_id, local.config.log_analytics_workspace_id)
   log_analytics_destination_type = try(each.value.log_analytics_destination_type, null) // AzureDiagnostics or Dedicated
 
   dynamic "enabled_log" {
-    for_each = coalesce(each.value.log_category_types, data.azurerm_monitor_diagnostic_categories.this[each.key].log_category_types)
+    for_each = try(each.value.log_category_groups, [])
+
+    content {
+      category_group = enabled_log.value
+    }
+  }
+
+  dynamic "enabled_log" {
+    for_each = coalesce(
+      try(each.value.log_category_types, null),
+      length(try(each.value.log_category_groups, [])) != 0 ? [] : null,
+      data.azurerm_monitor_diagnostic_categories.this[each.key].log_category_types
+    )
 
     content {
       category = enabled_log.value
     }
   }
 
-  dynamic "metric" {
+  dynamic "enabled_metric" {
     for_each = coalesce(each.value.metrics, data.azurerm_monitor_diagnostic_categories.this[each.key].metrics)
 
     content {
-      category = metric.value
+      category = enabled_metric.value
     }
   }
 }

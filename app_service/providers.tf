@@ -7,11 +7,11 @@ terraform {
     }
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 4.0.0, < 5.0.0"
+      version = ">= 4.81.0, < 6.0.0"
     }
     azurecaf = {
       source  = "aztfmod/azurecaf"
-      version = ">= 1.2.31"
+      version = ">= 1.2.31, < 2.0.0"
     }
   }
 }

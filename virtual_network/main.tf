@@ -128,10 +128,9 @@ resource "azurerm_subnet" "this" {
   address_prefixes                              = [ module.subnet_addrs.0.network_cidr_blocks[each.key] ]
   private_endpoint_network_policies             = each.value.private_endpoint_network_policies
   private_link_service_network_policies_enabled = each.value.private_link_service_network_policies_enabled
-  service_endpoints                             = each.value.service_endpoints
 
   dynamic "delegation" {
-    for_each = local.config.subnets[each.key].service_delegation[*]
+    for_each = each.value.service_delegation[*]
 
     content {
       name = replace(try(delegation.value.name, delegation.value), "/", ".")
@@ -140,6 +139,14 @@ resource "azurerm_subnet" "this" {
         name    = try(delegation.value.name, delegation.value)
         actions = try(delegation.value.actions, ["Microsoft.Network/virtualNetworks/subnets/action"])
       }
+    }
+  }
+
+  dynamic "service_endpoint" {
+    for_each = each.value.service_endpoints[*]
+
+    content {
+      service = try(service_endpoint.value.service, service_endpoint.value)
     }
   }
 }
@@ -160,40 +167,39 @@ resource "azurerm_private_dns_zone_virtual_network_link" "this" {
     for k, v in azurerm_private_dns_zone.this : merge(
       length(local.config.address_space) > 0 ? {
         format("%s_%s-%s-%s", k, "vnet", local.config.name, var.environment) = {
-          name                  = azurerm_virtual_network.this[0].name
-          virtual_network_id    = azurerm_virtual_network.this[0].id
-          private_dns_zone_name = k
-          registration_enabled  = null
-          resolution_policy     = null
+          name                 = azurerm_virtual_network.this[0].name
+          virtual_network_id   = azurerm_virtual_network.this[0].id
+          private_dns_zone_id  = v.id
+          registration_enabled = null
+          resolution_policy    = null
         }
       } : local.config.virtual_network_id != null ? {
         join("_", [k, provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name]) = {
-          name                  = provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name
-          virtual_network_id    = local.config.virtual_network_id
-          private_dns_zone_name = k
-          registration_enabled  = null
-          resolution_policy     = null
+          name                 = provider::azurerm::parse_resource_id(local.config.virtual_network_id).resource_name
+          virtual_network_id   = local.config.virtual_network_id
+          private_dns_zone_id  = v.id
+          registration_enabled = null
+          resolution_policy    = null
         }
       } : {},
       {
         for i in try(local.config.private_dns_zones[k].virtual_network_links, []) : join("_", [k, provider::azurerm::parse_resource_id(try(i.id, i)).resource_name]) => {
-          name                  = provider::azurerm::parse_resource_id(try(i.id, i)).resource_name
-          virtual_network_id    = try(i.id, i)
-          private_dns_zone_name = k
-          registration_enabled  = try(i.registration_enabled, null)
-          resolution_policy     = try(i.resolution_policy, null)
+          name                 = provider::azurerm::parse_resource_id(try(i.id, i)).resource_name
+          virtual_network_id   = try(i.id, i)
+          private_dns_zone_id  = v.id
+          registration_enabled = try(i.registration_enabled, null)
+          resolution_policy    = try(i.resolution_policy, null)
         }
       }
     )
   ]...)
 
-  name                  = each.value.name
-  resource_group_name   = local.config.resource_group_name
-  virtual_network_id    = each.value.virtual_network_id
-  private_dns_zone_name = each.value.private_dns_zone_name
-  registration_enabled  = each.value.registration_enabled
-  resolution_policy     = each.value.resolution_policy
-  tags                  = local.config.tags
+  name                 = each.value.name
+  virtual_network_id   = each.value.virtual_network_id
+  private_dns_zone_id  = each.value.private_dns_zone_id
+  registration_enabled = each.value.registration_enabled
+  resolution_policy    = each.value.resolution_policy
+  tags                 = local.config.tags
 }
 
 resource "azurecaf_name" "private_endpoint" {
@@ -249,20 +255,19 @@ resource "azurerm_private_dns_a_record" "this" {
   for_each = merge(flatten([
     for k, v in local.config.subnets : [
       for i in v.private_endpoints: {
-        for ii in setproduct(i.private_dns_zone_group.private_dns_zone_ids, i.private_dns_a_record_names) : join("_", ii) => {
-          zone_name = ii[0]
-          name      = ii[1]
-          records   = [azurerm_private_endpoint.this[try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0])].private_service_connection[0].private_ip_address]
+        for ii in setproduct(i.private_dns_a_record_names, i.private_dns_zone_group.private_dns_zone_ids) : join("_", ii) => {
+          name                = ii[0]
+          private_dns_zone_id = azurerm_private_dns_zone.this[ii[1]].id
+          records             = [azurerm_private_endpoint.this[try(i.name, regex(".+/(.+)", i.private_connection_resource_id)[0])].private_service_connection[0].private_ip_address]
         }
       } if length(try(i.private_dns_zone_group.private_dns_zone_ids, [])) > 0 && length(try(i.private_dns_a_record_names, [])) > 0
     ] if length(v.private_endpoints) > 0
   ])...)
 
   name                = each.value.name
-  resource_group_name = local.config.resource_group_name
+  private_dns_zone_id = each.value.private_dns_zone_id
   records             = each.value.records
   ttl                 = 300
-  zone_name           = each.value.zone_name
 }
 
 resource "azurecaf_name" "network_security_group" {

@@ -42,8 +42,8 @@ locals {
     account_replication_type        = try(local.env_config.storage_account.account_replication_type, var.config.global.storage_account.account_replication_type, "LRS") // LRS, GRS, RAGRS, ZRS, GZRS or RAGZRS
     access_tier                     = try(local.env_config.storage_account.access_tier, var.config.global.storage_account.access_tier, "Hot")                           // Hot or Cold
     min_tls_version                 = try(local.env_config.storage_account.min_tls_version, var.config.global.storage_account.min_tls_version, "TLS1_2")                // TLS1_0, TLS1_1, or TLS1_2
-    shared_access_key_enabled       = try(local.env_config.storage_account.shared_access_key_enabled, var.config.global.storage_account.shared_access_key_enabled, true)
-    public_network_access_enabled   = try(local.env_config.storage_account.public_network_access_enabled, var.config.global.storage_account.public_network_access_enabled, true)
+    shared_access_key_enabled       = try(local.env_config.storage_account.shared_access_key_enabled, var.config.global.storage_account.shared_access_key_enabled, false)
+    public_network_access           = try(local.env_config.storage_account.public_network_access, var.config.global.storage_account.public_network_access, "Disabled")               // Enabled, Disabled or SecuredByPerimeter
     allow_nested_items_to_be_public = try(local.env_config.storage_account.allow_nested_items_to_be_public, var.config.global.storage_account.allow_nested_items_to_be_public, true) // false disallows anonymous blob access
     is_hns_enabled                  = try(local.env_config.storage_account.is_hns_enabled, var.config.global.storage_account.is_hns_enabled, false)
     sftp_enabled                    = try(local.env_config.storage_account.sftp_enabled, var.config.global.storage_account.sftp_enabled, false)
@@ -100,7 +100,7 @@ resource "azurerm_storage_account" "this" {
   access_tier                     = local.config.access_tier
   min_tls_version                 = local.config.min_tls_version
   shared_access_key_enabled       = local.config.shared_access_key_enabled
-  public_network_access_enabled   = local.config.public_network_access_enabled
+  public_network_access           = local.config.public_network_access
   allow_nested_items_to_be_public = local.config.allow_nested_items_to_be_public
   is_hns_enabled                  = local.config.is_hns_enabled
   sftp_enabled                    = local.config.sftp_enabled
@@ -127,7 +127,7 @@ resource "azurerm_storage_container" "this" {
   for_each = { for k, v in local.config.storage_containers : k => v if length(azurerm_storage_account.this) > 0 }
 
   name                  = each.key
-  storage_account_name  = azurerm_storage_account.this.0.name
+  storage_account_id    = azurerm_storage_account.this[0].id
   container_access_type = each.value.container_access_type
   metadata              = each.value.metadata
 }
